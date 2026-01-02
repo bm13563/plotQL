@@ -655,3 +655,85 @@ FORMAT """
 
         # Should suggest format options
         assert any(c.text == "title" for c in completions)
+
+
+class TestMultiSeriesAutocomplete:
+    """Tests for autocomplete with multiple series."""
+
+    @pytest.fixture
+    def completer(self):
+        return AutoCompleter()
+
+    def test_plot_keyword_after_first_series(self, completer, temp_csv: Path):
+        """Test typing PLOT after completing first series suggests PLOT keyword."""
+        text = f"""WITH '{temp_csv}'
+PLOT y AGAINST x AS 'line'
+    FORMAT color = 'peach'
+PL"""
+        completions = completer.get_completions(text, len(text))
+
+        # Should suggest PLOT keyword
+        assert any(c.text == "PLOT" for c in completions), f"Expected PLOT in completions, got: {[c.text for c in completions]}"
+
+    def test_column_after_second_plot(self, completer, temp_csv: Path):
+        """Test column suggestions after second PLOT keyword."""
+        text = f"""WITH '{temp_csv}'
+PLOT y AGAINST x AS 'line'
+PLOT """
+        completions = completer.get_completions(text, len(text))
+
+        # Should suggest columns (x and y are in the temp_csv fixture)
+        assert any(c.kind == "column" for c in completions), f"Expected columns in completions, got: {[c.text for c in completions]}"
+
+    def test_against_after_second_series_column(self, completer, temp_csv: Path):
+        """Test AGAINST suggestion after column in second series."""
+        text = f"""WITH '{temp_csv}'
+PLOT y AGAINST x AS 'line'
+PLOT y """
+        completions = completer.get_completions(text, len(text))
+
+        # Should suggest AGAINST
+        assert any(c.text == "AGAINST" for c in completions), f"Expected AGAINST in completions, got: {[c.text for c in completions]}"
+
+    def test_column_after_against_in_second_series(self, completer, temp_csv: Path):
+        """Test column suggestions after AGAINST in second series."""
+        text = f"""WITH '{temp_csv}'
+PLOT y AGAINST x AS 'line'
+PLOT y AGAINST """
+        completions = completer.get_completions(text, len(text))
+
+        # Should suggest columns
+        assert any(c.kind == "column" for c in completions), f"Expected columns in completions, got: {[c.text for c in completions]}"
+
+    def test_as_after_second_series_against_column(self, completer, temp_csv: Path):
+        """Test AS/FILTER/FORMAT suggestions after AGAINST column in second series."""
+        text = f"""WITH '{temp_csv}'
+PLOT y AGAINST x AS 'line'
+PLOT y AGAINST x """
+        completions = completer.get_completions(text, len(text))
+
+        # Should suggest AS, FILTER, FORMAT, and PLOT (for another series)
+        completion_texts = [c.text for c in completions]
+        assert "AS" in completion_texts, f"Expected AS in completions, got: {completion_texts}"
+
+    def test_format_after_format_value_suggests_plot_and_and(self, completer, temp_csv: Path):
+        """Test suggestions after FORMAT value include PLOT for new series."""
+        text = f"""WITH '{temp_csv}'
+PLOT y AGAINST x AS 'line'
+    FORMAT color = 'blue' """
+        completions = completer.get_completions(text, len(text))
+
+        completion_texts = [c.text for c in completions]
+        # Should suggest AND (for more format options) and PLOT (for new series)
+        assert "AND" in completion_texts or "PLOT" in completion_texts, f"Expected AND or PLOT, got: {completion_texts}"
+
+    def test_three_series_third_plot_column(self, completer, temp_csv: Path):
+        """Test column suggestions work for third series."""
+        text = f"""WITH '{temp_csv}'
+PLOT y AGAINST x AS 'line'
+PLOT y AGAINST x AS 'scatter'
+PLOT """
+        completions = completer.get_completions(text, len(text))
+
+        # Should suggest columns
+        assert any(c.kind == "column" for c in completions), f"Expected columns in completions, got: {[c.text for c in completions]}"

@@ -73,8 +73,9 @@ def get_context(text: str, cursor_pos: int) -> Tuple[str, str, Optional[str]]:
     before_stripped = before.rstrip()
 
     # Extract plot type if present (for filtering format options)
-    plot_type_match = re.search(r"\bAS\s+['\"](\w+)['\"]", before, re.IGNORECASE)
-    detected_plot_type = plot_type_match.group(1).lower() if plot_type_match else None
+    # For multi-series, get the plot type from the LAST/current series
+    plot_type_matches = list(re.finditer(r"\bAS\s+['\"](\w+)['\"]", before, re.IGNORECASE))
+    detected_plot_type = plot_type_matches[-1].group(1).lower() if plot_type_matches else None
 
     # Check if we're inside an aggregate function (e.g., count(|) )
     agg_match = re.search(r"\b(count|sum|avg|min|max|median)\(\s*([a-zA-Z_]*)?$", before, re.IGNORECASE)
@@ -87,15 +88,41 @@ def get_context(text: str, cursor_pos: int) -> Tuple[str, str, Optional[str]]:
     if with_match:
         return ("file_path", with_match.group(1), detected_plot_type)
 
-    # Check for FORMAT context
-    if "FORMAT" in before_upper:
-        last_format = before_upper.rfind("FORMAT")
-        after_format = before[last_format:]
+    # For multi-series support, find the last PLOT keyword and work from there
+    # This isolates context to the current series being typed
+    last_plot_match = None
+    for m in re.finditer(r"\bPLOT\b", before_upper):
+        last_plot_match = m
+
+    # Determine text context for current series (after last PLOT, or full text if no PLOT yet)
+    if last_plot_match:
+        current_series_start = last_plot_match.start()
+        current_series = before[current_series_start:]
+        current_series_upper = current_series.upper()
+    else:
+        current_series = before
+        current_series_upper = before_upper
+
+    # Check for FORMAT context - only within the current series
+    if "FORMAT" in current_series_upper:
+        last_format = current_series_upper.rfind("FORMAT")
+        after_format = current_series[last_format:]
+
+        # Check if we're typing a new word after a complete FORMAT value on a new line
+        # This handles: FORMAT color = 'peach'\nPL (typing PLOT for new series)
+        format_value_then_newword = re.search(
+            r"FORMAT\s+\w+\s*=\s*(?:'[^']*'|\"[^\"]*\"|\w+)(?:\s+AND\s+\w+\s*=\s*(?:'[^']*'|\"[^\"]*\"|\w+))*\s*[\n\r]+\s*[a-zA-Z]+$",
+            current_series, re.IGNORECASE
+        )
+        if format_value_then_newword:
+            # User is typing a new keyword after FORMAT on a new line - treat as after_format
+            return ("after_format", partial, detected_plot_type)
+
         # Check if FORMAT clause looks complete (has key = value and ends with space/newline)
         # Pattern: FORMAT key = value (with possible AND key = value chains)
         format_complete = re.search(
             r"FORMAT\s+(\w+\s*=\s*(?:'[^']*'|\"[^\"]*\"|\w+)(?:\s+AND\s+\w+\s*=\s*(?:'[^']*'|\"[^\"]*\"|\w+))*)\s+$",
-            before, re.IGNORECASE
+            current_series, re.IGNORECASE
         )
         if format_complete:
             # FORMAT clause is complete - suggest PLOT for new series, AND for more format options
