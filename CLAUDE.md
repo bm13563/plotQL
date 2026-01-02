@@ -6,6 +6,10 @@ PlotQL is a SQL-like DSL for creating plots. Users write queries like:
 WITH 'data.csv' PLOT price AGAINST time FILTER price > 100 FORMAT title = 'Price Chart'
 ```
 
+## Environment
+
+Use the virtual environment in the project's root. Use uv. See ctl.sh for examples of how to work in the python environment.
+
 ## Architecture
 
 **Core and UI are completely separate.** This separation is critical.
@@ -23,7 +27,7 @@ Nothing should bleed between core and ui. Core knows nothing about the TUI. The 
 python -m pytest tests/ -v
 ```
 
-Tests mirror the architecture: `tests/core/` and `tests/ui/` are independent.
+Tests mirror the architecture: `tests/core/` and `tests/ui/` are independent. There are a lot of tests, so it's worth working out which ones are relevant to the feature being implemented and only running those.
 
 ## Feature Checklist
 

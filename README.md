@@ -4,10 +4,6 @@ A SQL-like query language for plotting data. No Python boilerplate, no rememberi
 
 ![PlotQL TUI](examples/tui_screenshot.png)
 
-```sql
-WITH 'sales.csv' PLOT revenue AGAINST date
-```
-
 That's it. One line to go from CSV to chart.
 
 ## The Language
@@ -53,16 +49,37 @@ WITH 'orders.csv' PLOT sum(amount) AGAINST customer AS bar
 WITH 'logs.csv' PLOT count(event) AGAINST hour AS bar
 ```
 
+### Multiple Series
+
+Layer multiple plots on the same chart. Later series render on top:
+
+```sql
+-- Highlight specific points by overlaying a filtered series
+WITH 'trades.csv'
+PLOT price AGAINST time
+PLOT price AGAINST time
+    FILTER user_id = 'vip'
+    FORMAT marker_size = 5
+
+-- Compare different metrics
+WITH 'stocks.csv'
+PLOT open AGAINST date AS line
+PLOT close AGAINST date AS line
+    FORMAT line_color = 'red'
+```
+
+Each `PLOT` clause can have its own `FILTER` and `FORMAT` options.
+
 ### Styling
 
 ```sql
 -- Custom colors and labels
 WITH 'data.csv' PLOT value AGAINST time
-FORMAT color='blue', title='My Chart', xlabel='Time', ylabel='Value'
+FORMAT title = 'My Chart' AND xlabel = 'Time' AND ylabel = 'Value'
 
--- Color by category
-WITH 'iris.csv' PLOT petal_length AGAINST sepal_length AS scatter
-COLOR BY species
+-- Dynamic marker sizing by column
+WITH 'data.csv' PLOT price AGAINST time AS scatter
+FORMAT marker_size = volume AND marker_color = category
 ```
 
 ### Plot Types
