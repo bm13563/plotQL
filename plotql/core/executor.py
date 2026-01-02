@@ -18,12 +18,43 @@ from plotql.core.ast import (
     PlotType,
     WhereClause,
 )
-from plotql.core.utils import normalize_sizes, TimestampInfo, detect_timestamp_columns
+from plotql.core.utils import map_to_sizes, map_to_colors, TimestampInfo, detect_timestamp_columns
+
+
+# Valid color names that can be used as literal marker_color values
+VALID_COLORS = {
+    "blue", "red", "green", "yellow", "orange", "pink",
+    "purple", "cyan", "teal", "magenta", "white", "gray", "grey"
+}
 
 
 class ExecutionError(Exception):
     """Raised when query execution fails."""
     pass
+
+
+@dataclass
+class SizeInfo:
+    """Information about marker sizes for legend display."""
+    is_continuous: bool
+    column_name: str
+    # For continuous: (min_value, max_value)
+    # For categorical: dict of {value: size}
+    min_value: Optional[float] = None
+    max_value: Optional[float] = None
+    category_sizes: Optional[dict] = None
+
+
+@dataclass
+class ColorInfo:
+    """Information about marker colors for legend display."""
+    is_continuous: bool
+    column_name: str
+    # For continuous: (min_value, max_value)
+    # For categorical: dict of {value: color_name}
+    min_value: Optional[float] = None
+    max_value: Optional[float] = None
+    category_colors: Optional[dict] = None
 
 
 @dataclass
@@ -37,6 +68,8 @@ class PlotData:
     # Optional columns for dynamic formatting
     marker_sizes: Optional[List[float]] = None
     marker_colors: Optional[List[str]] = None
+    size_info: Optional[SizeInfo] = None
+    color_info: Optional[ColorInfo] = None
     # Timestamp info for datetime axes
     x_timestamp: Optional[TimestampInfo] = None
     y_timestamp: Optional[TimestampInfo] = None
@@ -234,25 +267,99 @@ def execute(query: PlotQuery) -> PlotData:
     # (only valid for non-aggregated queries)
     marker_sizes = None
     marker_colors = None
+    size_info = None
+    color_info = None
 
     fmt = query.format
     if not query.is_aggregate:
         if fmt.marker_size:
             if fmt.marker_size in df.columns:
-                # Column reference - normalize values
+                # Column reference - map values to sizes
                 raw_sizes = df[fmt.marker_size].to_list()
-                marker_sizes = normalize_sizes(raw_sizes)
+                marker_sizes, is_continuous = map_to_sizes(raw_sizes)
+
+                # Build size info for legend
+                if is_continuous:
+                    valid_values = [float(v) for v in raw_sizes if v is not None]
+                    size_info = SizeInfo(
+                        is_continuous=True,
+                        column_name=fmt.marker_size,
+                        min_value=min(valid_values) if valid_values else 0,
+                        max_value=max(valid_values) if valid_values else 0,
+                    )
+                else:
+                    # Build category -> size mapping
+                    unique_values = []
+                    for v in raw_sizes:
+                        if v not in unique_values:
+                            unique_values.append(v)
+                    n_categories = len(unique_values)
+                    if n_categories == 1:
+                        category_sizes = {unique_values[0]: 3.0}
+                    else:
+                        size_step = 4.0 / (n_categories - 1)
+                        category_sizes = {
+                            val: 1.0 + i * size_step
+                            for i, val in enumerate(unique_values)
+                        }
+                    size_info = SizeInfo(
+                        is_continuous=False,
+                        column_name=fmt.marker_size,
+                        category_sizes=category_sizes,
+                    )
             else:
                 # Try as literal number - create uniform size list
                 try:
                     size_val = float(fmt.marker_size)
-                    # Clamp to valid range (1-5)
-                    size_val = max(1.0, min(5.0, size_val))
+                    # Validate range (must be 1-5)
+                    if size_val < 1.0 or size_val > 5.0:
+                        raise ExecutionError(
+                            f"marker_size must be between 1 and 5, got {size_val}"
+                        )
                     marker_sizes = [size_val] * len(x)
                 except ValueError:
-                    pass  # Not a valid number, ignore
-        if fmt.marker_color and fmt.marker_color in df.columns:
-            marker_colors = df[fmt.marker_color].to_list()
+                    raise ExecutionError(
+                        f"marker_size '{fmt.marker_size}' is not a valid column name or number (1-5)"
+                    )
+        if fmt.marker_color:
+            if fmt.marker_color in df.columns:
+                # Column reference - map values to colors
+                raw_colors = df[fmt.marker_color].to_list()
+                marker_colors, is_continuous = map_to_colors(raw_colors)
+
+                # Build color info for legend
+                if is_continuous:
+                    valid_values = [float(v) for v in raw_colors if v is not None]
+                    color_info = ColorInfo(
+                        is_continuous=True,
+                        column_name=fmt.marker_color,
+                        min_value=min(valid_values) if valid_values else 0,
+                        max_value=max(valid_values) if valid_values else 0,
+                    )
+                else:
+                    # Build category -> color mapping
+                    from plotql.core.utils import BUCKET_COLORS
+                    unique_values = []
+                    for v in raw_colors:
+                        if v not in unique_values:
+                            unique_values.append(v)
+                    category_colors = {
+                        val: BUCKET_COLORS[i % len(BUCKET_COLORS)]
+                        for i, val in enumerate(unique_values)
+                    }
+                    color_info = ColorInfo(
+                        is_continuous=False,
+                        column_name=fmt.marker_color,
+                        category_colors=category_colors,
+                    )
+            elif fmt.marker_color.lower() in VALID_COLORS:
+                # Valid literal color name - apply to all points
+                marker_colors = [fmt.marker_color.lower()] * len(x)
+            else:
+                raise ExecutionError(
+                    f"marker_color '{fmt.marker_color}' is not a valid column name or color. "
+                    f"Valid colors: {', '.join(sorted(VALID_COLORS))}"
+                )
 
     return PlotData(
         x=x,
@@ -262,6 +369,8 @@ def execute(query: PlotQuery) -> PlotData:
         filtered_count=filtered_count,
         marker_sizes=marker_sizes,
         marker_colors=marker_colors,
+        size_info=size_info,
+        color_info=color_info,
         x_timestamp=x_timestamp,
         y_timestamp=y_timestamp,
     )

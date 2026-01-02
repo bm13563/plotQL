@@ -140,24 +140,147 @@ class MatplotlibEngine(Engine):
             # Handle per-point colors if available
             colors: Union[str, List[str]] = marker_color
             if data.marker_colors:
-                colors = [self.get_color(c) for c in data.marker_colors]
+                # Check if colors are hex values (continuous) or names (categorical)
+                if data.marker_colors[0].startswith('#'):
+                    # Continuous - use hex values directly
+                    colors = data.marker_colors
+                else:
+                    # Categorical - convert names to hex
+                    colors = [self.get_color(c) for c in data.marker_colors]
 
-            # Handle marker sizes
+            # Handle marker sizes (input is 1-5, map to matplotlib point sizes)
+            # Size 1 -> 20pt, Size 5 -> 100pt for clear visual distinction
             sizes = None
             if data.marker_sizes:
-                sizes = [max(10, min(20, s * 15)) for s in data.marker_sizes]
+                sizes = [20 + (s - 1) * 20 for s in data.marker_sizes]
 
             scatter = ax.scatter(
                 data.x,
                 data.y,
                 c=colors,
-                s=sizes if sizes else 10,
+                s=sizes if sizes else 30,
                 alpha=1.0,
                 edgecolors='none',
                 marker='s',  # Square marker - no antialiasing needed for straight edges
                 linewidths=0,
             )
             scatter.set_antialiased(False)
+
+            # Add legend/colorbar if color_info is available
+            if data.color_info:
+                if data.color_info.is_continuous:
+                    # Add colorbar for continuous data
+                    from matplotlib.colors import LinearSegmentedColormap
+                    import numpy as np
+
+                    # Create colormap from gradient colors
+                    cmap = LinearSegmentedColormap.from_list(
+                        'plotql_gradient',
+                        ['#89b4fa', '#f9e2af']  # blue -> yellow
+                    )
+                    sm = plt.cm.ScalarMappable(
+                        cmap=cmap,
+                        norm=plt.Normalize(
+                            vmin=data.color_info.min_value,
+                            vmax=data.color_info.max_value
+                        )
+                    )
+                    sm.set_array([])
+                    cbar = fig.colorbar(sm, ax=ax, shrink=0.8, pad=0.02)
+                    cbar.set_label(
+                        data.color_info.column_name,
+                        color=self._COLORS["text"],
+                        fontsize=LABEL_SIZE
+                    )
+                    cbar.ax.yaxis.set_tick_params(color=self._COLORS["text"])
+                    cbar.outline.set_edgecolor(self._COLORS["grid"])
+                    plt.setp(
+                        plt.getp(cbar.ax.axes, 'yticklabels'),
+                        color=self._COLORS["text"],
+                        fontsize=TICK_SIZE
+                    )
+                else:
+                    # Add legend for categorical data
+                    from matplotlib.patches import Patch
+                    legend_handles = []
+                    for value, color_name in data.color_info.category_colors.items():
+                        legend_handles.append(
+                            Patch(
+                                facecolor=self.get_color(color_name),
+                                label=str(value)
+                            )
+                        )
+                    legend = ax.legend(
+                        handles=legend_handles,
+                        title=data.color_info.column_name,
+                        loc='upper right',
+                        fontsize=TICK_SIZE,
+                        title_fontsize=LABEL_SIZE,
+                        framealpha=0.8,
+                        facecolor=self._COLORS["background"],
+                        edgecolor=self._COLORS["grid"],
+                    )
+                    legend.get_title().set_color(self._COLORS["text"])
+                    for text in legend.get_texts():
+                        text.set_color(self._COLORS["text"])
+
+            # Add size legend if size_info is available
+            if data.size_info:
+                from matplotlib.lines import Line2D
+
+                if data.size_info.is_continuous:
+                    # Show a few representative sizes for continuous data
+                    min_val = data.size_info.min_value
+                    max_val = data.size_info.max_value
+                    # Show 3 sizes: min, mid, max
+                    legend_sizes = [1.0, 3.0, 5.0]
+                    legend_values = [min_val, (min_val + max_val) / 2, max_val]
+                    legend_handles = []
+                    for size, val in zip(legend_sizes, legend_values):
+                        mpl_size = 20 + (size - 1) * 20
+                        legend_handles.append(
+                            Line2D([0], [0],
+                                   marker='s',
+                                   color='w',
+                                   markerfacecolor=marker_color,
+                                   markersize=mpl_size ** 0.5,  # sqrt for visual size
+                                   label=f'{val:.2g}',
+                                   linestyle='None')
+                        )
+                else:
+                    # Show each category with its size
+                    legend_handles = []
+                    for value, size in data.size_info.category_sizes.items():
+                        mpl_size = 20 + (size - 1) * 20
+                        legend_handles.append(
+                            Line2D([0], [0],
+                                   marker='s',
+                                   color='w',
+                                   markerfacecolor=marker_color,
+                                   markersize=mpl_size ** 0.5,
+                                   label=str(value),
+                                   linestyle='None')
+                        )
+
+                # Position size legend on the left if color legend is on the right
+                loc = 'upper left' if data.color_info else 'upper right'
+                size_legend = ax.legend(
+                    handles=legend_handles,
+                    title=data.size_info.column_name,
+                    loc=loc,
+                    fontsize=TICK_SIZE,
+                    title_fontsize=LABEL_SIZE,
+                    framealpha=0.8,
+                    facecolor=self._COLORS["background"],
+                    edgecolor=self._COLORS["grid"],
+                )
+                size_legend.get_title().set_color(self._COLORS["text"])
+                for text in size_legend.get_texts():
+                    text.set_color(self._COLORS["text"])
+
+                # If we have both color and size legends, need to add size legend separately
+                if data.color_info and not data.color_info.is_continuous:
+                    ax.add_artist(size_legend)
 
         elif query.plot_type == PlotType.LINE:
             ax.plot(

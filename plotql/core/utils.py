@@ -13,58 +13,192 @@ import polars as pl
 
 
 # =============================================================================
-# Size Normalization (for scatter plot markers)
+# Size Mapping (for scatter plot markers)
 # =============================================================================
 
-def normalize_sizes(
-    values: List[float],
-    min_size: float = 1.0,
-    max_size: float = 5.0
-) -> List[float]:
-    """
-    Normalize a list of values to a range suitable for marker sizes.
+# Size range for markers (1.0 to 5.0)
+SIZE_MIN = 1.0
+SIZE_MAX = 5.0
 
-    Uses min-max normalization to scale values between min_size and max_size.
-    Handles edge cases like constant values or None/NaN.
+
+def map_to_sizes(
+    values: List,
+    num_buckets: int = 5,
+) -> tuple[List[float], bool]:
     """
-    # Filter out None/NaN and convert to float
-    clean_values = []
+    Map a list of values to marker sizes (1.0 to 5.0).
+
+    For numeric data: uses continuous linear interpolation.
+    For categorical data: maps unique values to discrete size buckets.
+
+    Args:
+        values: List of values (numeric or categorical)
+        num_buckets: Number of size buckets for categorical data (default 5)
+
+    Returns:
+        Tuple of (list of sizes from 1.0-5.0, is_continuous)
+    """
+    if not values:
+        return [], False
+
+    # Check if values are numeric by trying to convert them
+    numeric_values = []
+    is_numeric = True
     for v in values:
-        try:
-            if v is not None:
-                clean_values.append(float(v))
-            else:
-                clean_values.append(None)
-        except (TypeError, ValueError):
-            clean_values.append(None)
-
-    # Get valid values for statistics
-    valid = [v for v in clean_values if v is not None]
-
-    if not valid:
-        return [min_size] * len(values)
-
-    val_min = min(valid)
-    val_max = max(valid)
-    val_range = val_max - val_min
-
-    # Handle constant values (no variance)
-    if val_range == 0:
-        mid_size = (min_size + max_size) / 2
-        return [mid_size if v is not None else min_size for v in clean_values]
-
-    # Normalize to [min_size, max_size]
-    size_range = max_size - min_size
-    normalized = []
-    for v in clean_values:
         if v is None:
-            normalized.append(min_size)
+            numeric_values.append(None)
         else:
-            # Scale to [0, 1] then to [min_size, max_size]
-            scaled = (v - val_min) / val_range
-            normalized.append(min_size + scaled * size_range)
+            try:
+                numeric_values.append(float(v))
+            except (TypeError, ValueError):
+                is_numeric = False
+                break
 
-    return normalized
+    if is_numeric:
+        # Use continuous interpolation for numeric data
+        valid = [v for v in numeric_values if v is not None]
+        if not valid:
+            mid_size = (SIZE_MIN + SIZE_MAX) / 2
+            return [mid_size] * len(values), True
+
+        val_min = min(valid)
+        val_max = max(valid)
+        val_range = val_max - val_min
+
+        if val_range == 0:
+            # All values the same - use middle size
+            mid_size = (SIZE_MIN + SIZE_MAX) / 2
+            return [mid_size] * len(values), True
+
+        size_range = SIZE_MAX - SIZE_MIN
+        result = []
+        for v in numeric_values:
+            if v is None:
+                result.append(SIZE_MIN)
+            else:
+                t = (v - val_min) / val_range
+                result.append(SIZE_MIN + t * size_range)
+        return result, True
+    else:
+        # For categorical data, map unique values to discrete sizes
+        unique_values = []
+        for v in values:
+            if v not in unique_values:
+                unique_values.append(v)
+
+        # Calculate size for each category
+        n_categories = len(unique_values)
+        if n_categories == 1:
+            size_step = 0
+            base_size = (SIZE_MIN + SIZE_MAX) / 2
+        else:
+            size_step = (SIZE_MAX - SIZE_MIN) / (n_categories - 1)
+            base_size = SIZE_MIN
+
+        value_to_size = {}
+        for i, val in enumerate(unique_values):
+            value_to_size[val] = base_size + i * size_step
+
+        return [value_to_size[v] for v in values], False
+
+
+# Default color palette for categorical colors (5 distinct colors)
+BUCKET_COLORS = ["blue", "green", "yellow", "pink", "teal"]
+
+# Gradient endpoints for continuous color scale (blue -> yellow)
+GRADIENT_START = (137, 180, 250)  # #89b4fa - soft blue
+GRADIENT_END = (249, 226, 175)    # #f9e2af - soft yellow
+
+
+def interpolate_color(t: float) -> str:
+    """
+    Interpolate between gradient start and end colors.
+
+    Args:
+        t: Value between 0 and 1
+
+    Returns:
+        Hex color string (e.g., "#89b4fa")
+    """
+    t = max(0.0, min(1.0, t))
+    r = int(GRADIENT_START[0] + t * (GRADIENT_END[0] - GRADIENT_START[0]))
+    g = int(GRADIENT_START[1] + t * (GRADIENT_END[1] - GRADIENT_START[1]))
+    b = int(GRADIENT_START[2] + t * (GRADIENT_END[2] - GRADIENT_START[2]))
+    return f"#{r:02x}{g:02x}{b:02x}"
+
+
+def map_to_colors(
+    values: List,
+    max_colors: int = 5,
+) -> tuple[List[str], bool]:
+    """
+    Map a list of values to colors.
+
+    For numeric data: uses continuous gradient interpolation.
+    For categorical data: maps unique values to discrete colors.
+
+    Args:
+        values: List of values (numeric or categorical)
+        max_colors: Maximum number of colors for categorical data (default 5)
+
+    Returns:
+        Tuple of (list of color strings, is_continuous)
+        - For continuous: hex color strings (e.g., "#89b4fa")
+        - For categorical: color names (e.g., "blue", "green")
+    """
+    if not values:
+        return [], False
+
+    colors = BUCKET_COLORS[:max_colors]
+
+    # Check if values are numeric by trying to convert them
+    numeric_values = []
+    is_numeric = True
+    for v in values:
+        if v is None:
+            numeric_values.append(None)
+        else:
+            try:
+                numeric_values.append(float(v))
+            except (TypeError, ValueError):
+                is_numeric = False
+                break
+
+    if is_numeric:
+        # Use continuous gradient for numeric data
+        valid = [v for v in numeric_values if v is not None]
+        if not valid:
+            return [interpolate_color(0.5)] * len(values), True
+
+        val_min = min(valid)
+        val_max = max(valid)
+        val_range = val_max - val_min
+
+        if val_range == 0:
+            # All values the same - use middle color
+            return [interpolate_color(0.5)] * len(values), True
+
+        result = []
+        for v in numeric_values:
+            if v is None:
+                result.append(interpolate_color(0.0))
+            else:
+                t = (v - val_min) / val_range
+                result.append(interpolate_color(t))
+        return result, True
+    else:
+        # For categorical data, map unique values to colors
+        unique_values = []
+        for v in values:
+            if v not in unique_values:
+                unique_values.append(v)
+
+        # Create mapping from value to color (cycle if more than max_colors)
+        value_to_color = {}
+        for i, val in enumerate(unique_values):
+            value_to_color[val] = colors[i % max_colors]
+
+        return [value_to_color[v] for v in values], False
 
 
 # =============================================================================
