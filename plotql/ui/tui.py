@@ -97,10 +97,10 @@ logger = logging.getLogger(__name__)
 EXAMPLE_QUERY = """\
 WITH 'examples/trades.csv'
 PLOT price AGAINST received_at AS 'line'
-    FORMAT color = 'pink'
-PLOT price AGAINST received_at
-    FILTER tx_sol_amount >= 3
-    FORMAT marker_size = 5 AND marker_color = 'teal'
+  FORMAT color = 'peach'
+PLOT price AGAINST received_at AS 'scatter'
+  FILTER tx_sol_amount >= 3
+  FORMAT marker_size = 3 AND marker_color = 'teal'
 """
 
 

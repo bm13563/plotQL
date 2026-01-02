@@ -26,10 +26,10 @@ THEME = PlotQLTheme(
     axes="#6e6a86",
 
     # Syntax highlighting - frequency-based color assignment
-    # Colors chosen to contrast against pink-purple background (cool tones pop)
+    # Colors chosen to contrast against pink-purple backfab387ground (cool tones pop)
     # HIGH FREQUENCY - soft but visible against the warm background
-    syntax_identifier="#cba6f7",   # Soft mint - cool green contrasts warm bg
-    syntax_string="#f9e2af",       # Soft butter yellow - warm but light enough
+    syntax_identifier="#f9e2af",   # Soft mint - cool green contrasts warm bg
+    syntax_string="#cba6f7",       # Soft butter yellow - warm but light enough
     syntax_keyword="#94e2d5",      # Soft seafoam - cool tone stands out
 
     # MEDIUM FREQUENCY - subtle accents
