@@ -2,6 +2,8 @@
 
 A SQL-like query language for plotting data. No Python boilerplate, no remembering matplotlib syntax - just describe what you want to plot.
 
+![PlotQL TUI](examples/tui_screenshot.png)
+
 ```sql
 WITH 'sales.csv' PLOT revenue AGAINST date
 ```
