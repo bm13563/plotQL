@@ -9,12 +9,17 @@ module.exports = grammar({
   rules: {
     query: $ => seq(
       $.with_clause,
+      repeat1($.series_clause)
+    ),
+
+    with_clause: $ => seq($.with, $.string),
+
+    // A series is a PLOT clause followed by optional FILTER and FORMAT
+    series_clause: $ => seq(
       $.plot_clause,
       optional($.filter_clause),
       optional($.format_clause)
     ),
-
-    with_clause: $ => seq($.with, $.string),
 
     plot_clause: $ => seq(
       $.plot,

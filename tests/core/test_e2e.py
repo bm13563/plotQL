@@ -27,7 +27,8 @@ class TestFullPipeline:
         assert ast.source == str(temp_csv)
 
         # Execute
-        data = execute(ast)
+        data_list = execute(ast)
+        data = data_list[0]
         assert len(data.x) == 5
         assert len(data.y) == 5
 
@@ -42,7 +43,8 @@ class TestFullPipeline:
         query_str = f"WITH '{temp_csv}' PLOT y AGAINST x AS 'line'"
 
         ast = parse(query_str)
-        data = execute(ast)
+        data_list = execute(ast)
+        data = data_list[0]
         result = render(data)
 
         assert result.to_bytes()
@@ -55,7 +57,8 @@ class TestFullPipeline:
         ast = parse(query_str)
         assert ast.is_aggregate
 
-        data = execute(ast)
+        data_list = execute(ast)
+        data = data_list[0]
         assert data.filtered_count == 3  # 3 groups
 
         result = render(data)
@@ -67,7 +70,8 @@ class TestFullPipeline:
         query_str = f"WITH '{temp_csv}' PLOT y AGAINST x AS 'hist'"
 
         ast = parse(query_str)
-        data = execute(ast)
+        data_list = execute(ast)
+        data = data_list[0]
         result = render(data)
 
         assert result.to_bytes()
@@ -82,7 +86,8 @@ class TestFilteredQueries:
         query_str = f"WITH '{temp_csv}' PLOT y AGAINST x FILTER category = 'A'"
 
         ast = parse(query_str)
-        data = execute(ast)
+        data_list = execute(ast)
+        data = data_list[0]
 
         # Original has 5 rows, 3 are category A
         assert data.row_count == 5
@@ -97,7 +102,8 @@ class TestFilteredQueries:
         query_str = f"WITH '{temp_csv}' PLOT y AGAINST x FILTER x > 2"
 
         ast = parse(query_str)
-        data = execute(ast)
+        data_list = execute(ast)
+        data = data_list[0]
 
         assert data.filtered_count == 3  # x=3,4,5
 
@@ -110,7 +116,8 @@ class TestFilteredQueries:
         query_str = f"WITH '{temp_csv}' PLOT y AGAINST x FILTER x > 1 AND x < 5"
 
         ast = parse(query_str)
-        data = execute(ast)
+        data_list = execute(ast)
+        data = data_list[0]
 
         assert data.filtered_count == 3  # x=2,3,4
 
@@ -123,7 +130,8 @@ class TestFilteredQueries:
         query_str = f"WITH '{temp_csv}' PLOT y AGAINST x FILTER x = 1 OR x = 5"
 
         ast = parse(query_str)
-        data = execute(ast)
+        data_list = execute(ast)
+        data = data_list[0]
 
         assert data.filtered_count == 2  # x=1,5
 
@@ -140,7 +148,8 @@ class TestAggregationQueries:
         query_str = f"WITH '{temp_csv_categorical}' PLOT count(amount) AGAINST group AS 'bar'"
 
         ast = parse(query_str)
-        data = execute(ast)
+        data_list = execute(ast)
+        data = data_list[0]
 
         # Each group has 2 entries
         assert data.filtered_count == 3
@@ -155,7 +164,8 @@ class TestAggregationQueries:
         query_str = f"WITH '{temp_csv_categorical}' PLOT sum(amount) AGAINST group AS 'bar'"
 
         ast = parse(query_str)
-        data = execute(ast)
+        data_list = execute(ast)
+        data = data_list[0]
 
         # Verify sums: A=30, B=70, C=110
         total = sum(data.y)
@@ -170,7 +180,8 @@ class TestAggregationQueries:
         query_str = f"WITH '{temp_csv_categorical}' PLOT avg(amount) AGAINST group AS 'bar'"
 
         ast = parse(query_str)
-        data = execute(ast)
+        data_list = execute(ast)
+        data = data_list[0]
 
         assert data.filtered_count == 3
 
@@ -183,13 +194,15 @@ class TestAggregationQueries:
         # MIN
         query_str = f"WITH '{temp_csv_categorical}' PLOT min(amount) AGAINST group AS 'bar'"
         ast = parse(query_str)
-        data = execute(ast)
+        data_list = execute(ast)
+        data = data_list[0]
         assert data.filtered_count == 3
 
         # MAX
         query_str = f"WITH '{temp_csv_categorical}' PLOT max(amount) AGAINST group AS 'bar'"
         ast = parse(query_str)
-        data = execute(ast)
+        data_list = execute(ast)
+        data = data_list[0]
         assert data.filtered_count == 3
 
 
@@ -203,7 +216,8 @@ class TestFormattedQueries:
         ast = parse(query_str)
         assert ast.format.title == "Custom Title"
 
-        data = execute(ast)
+        data_list = execute(ast)
+        data = data_list[0]
         result = render(data)
         assert result.to_bytes()
         result.close()
@@ -216,7 +230,8 @@ class TestFormattedQueries:
         assert ast.format.xlabel == "X Label"
         assert ast.format.ylabel == "Y Label"
 
-        data = execute(ast)
+        data_list = execute(ast)
+        data = data_list[0]
         result = render(data)
         assert result.to_bytes()
         result.close()
@@ -226,7 +241,8 @@ class TestFormattedQueries:
         query_str = f"WITH '{temp_csv}' PLOT y AGAINST x FORMAT marker_color = blue"
 
         ast = parse(query_str)
-        data = execute(ast)
+        data_list = execute(ast)
+        data = data_list[0]
 
         assert data.marker_colors is not None
         assert all(c == "blue" for c in data.marker_colors)
@@ -240,7 +256,8 @@ class TestFormattedQueries:
         query_str = f"WITH '{temp_csv}' PLOT y AGAINST x FORMAT marker_size = 4"
 
         ast = parse(query_str)
-        data = execute(ast)
+        data_list = execute(ast)
+        data = data_list[0]
 
         assert data.marker_sizes is not None
         assert all(s == 4.0 for s in data.marker_sizes)
@@ -254,7 +271,8 @@ class TestFormattedQueries:
         query_str = f"WITH '{temp_csv}' PLOT y AGAINST x FORMAT marker_color = category"
 
         ast = parse(query_str)
-        data = execute(ast)
+        data_list = execute(ast)
+        data = data_list[0]
 
         assert data.marker_colors is not None
         assert data.color_info is not None
@@ -269,7 +287,8 @@ class TestFormattedQueries:
         query_str = f"WITH '{temp_csv}' PLOT y AGAINST x FORMAT marker_size = value"
 
         ast = parse(query_str)
-        data = execute(ast)
+        data_list = execute(ast)
+        data = data_list[0]
 
         assert data.marker_sizes is not None
         assert data.size_info is not None
@@ -285,7 +304,8 @@ class TestFormattedQueries:
         ast = parse(query_str)
         assert ast.format.line_color == "red"
 
-        data = execute(ast)
+        data_list = execute(ast)
+        data = data_list[0]
         result = render(data)
         assert result.to_bytes()
         result.close()
@@ -303,7 +323,8 @@ class TestComplexQueries:
         )
 
         ast = parse(query_str)
-        data = execute(ast)
+        data_list = execute(ast)
+        data = data_list[0]
 
         # Filtered out amount <= 20 (10, 20), leaving 30,40,50,60
         # Groups B and C remain
@@ -323,7 +344,8 @@ class TestComplexQueries:
         )
 
         ast = parse(query_str)
-        data = execute(ast)
+        data_list = execute(ast)
+        data = data_list[0]
         result = render(data)
 
         assert result.to_bytes()
@@ -343,7 +365,8 @@ class TestComplexQueries:
         assert ast.filter is not None
         assert ast.format.title == "Filtered Line"
 
-        data = execute(ast)
+        data_list = execute(ast)
+        data = data_list[0]
         assert data.filtered_count == 3
 
         result = render(data)
@@ -358,28 +381,32 @@ class TestFileFormats:
         """Test CSV file loading."""
         query_str = f"WITH '{temp_csv}' PLOT y AGAINST x"
         ast = parse(query_str)
-        data = execute(ast)
+        data_list = execute(ast)
+        data = data_list[0]
         assert len(data.x) > 0
 
     def test_parquet_file(self, temp_parquet: Path):
         """Test Parquet file loading."""
         query_str = f"WITH '{temp_parquet}' PLOT y AGAINST x"
         ast = parse(query_str)
-        data = execute(ast)
+        data_list = execute(ast)
+        data = data_list[0]
         assert len(data.x) == 3
 
     def test_json_file(self, temp_json: Path):
         """Test JSON file loading."""
         query_str = f"WITH '{temp_json}' PLOT y AGAINST x"
         ast = parse(query_str)
-        data = execute(ast)
+        data_list = execute(ast)
+        data = data_list[0]
         assert len(data.x) == 3
 
     def test_ndjson_file(self, temp_ndjson: Path):
         """Test NDJSON file loading."""
         query_str = f"WITH '{temp_ndjson}' PLOT y AGAINST x"
         ast = parse(query_str)
-        data = execute(ast)
+        data_list = execute(ast)
+        data = data_list[0]
         assert len(data.x) == 3
 
 
@@ -391,7 +418,8 @@ class TestTimestampHandling:
         query_str = f"WITH '{temp_csv_with_timestamps}' PLOT value AGAINST timestamp"
 
         ast = parse(query_str)
-        data = execute(ast)
+        data_list = execute(ast)
+        data = data_list[0]
 
         assert data.x_timestamp is not None
         assert data.x_timestamp.column_name == "timestamp"
@@ -412,7 +440,8 @@ class TestRealDataFile:
         query_str = f"WITH '{trades_csv}' PLOT price AGAINST received_at"
 
         ast = parse(query_str)
-        data = execute(ast)
+        data_list = execute(ast)
+        data = data_list[0]
 
         assert data.row_count > 0
         assert data.x_timestamp is not None
@@ -430,7 +459,8 @@ class TestRealDataFile:
         query_str = f"WITH '{trades_csv}' PLOT price AGAINST received_at FILTER price > 10"
 
         ast = parse(query_str)
-        data = execute(ast)
+        data_list = execute(ast)
+        data = data_list[0]
 
         assert all(p > 10 for p in data.y)
 
@@ -450,7 +480,8 @@ class TestRealDataFile:
         )
 
         ast = parse(query_str)
-        data = execute(ast)
+        data_list = execute(ast)
+        data = data_list[0]
 
         assert data.marker_colors is not None
         assert data.color_info is not None
@@ -518,7 +549,8 @@ class TestOutputQuality:
         query_str = f"WITH '{temp_csv}' PLOT y AGAINST x"
 
         ast = parse(query_str)
-        data = execute(ast)
+        data_list = execute(ast)
+        data = data_list[0]
 
         engine = get_engine()
         result = engine.render(data, 800, 600)
@@ -532,7 +564,8 @@ class TestOutputQuality:
         query_str = f"WITH '{temp_csv}' PLOT y AGAINST x"
 
         ast = parse(query_str)
-        data = execute(ast)
+        data_list = execute(ast)
+        data = data_list[0]
         result = render(data)
 
         img = result.to_image()
@@ -548,7 +581,8 @@ class TestOutputQuality:
         query_str = f"WITH '{temp_csv}' PLOT y AGAINST x"
 
         ast = parse(query_str)
-        data = execute(ast)
+        data_list = execute(ast)
+        data = data_list[0]
         result = render(data)
 
         svg_bytes = result.to_bytes(format="svg")

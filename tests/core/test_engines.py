@@ -8,11 +8,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from plotql.core.ast import ColumnRef, FormatOptions, PlotQuery, PlotType
+from plotql.core.ast import ColumnRef, FormatOptions, PlotQuery, PlotSeries, PlotType
 from plotql.core.engines import MatplotlibEngine, get_engine
 from plotql.core.engines.base import Engine
 from plotql.core.executor import ColorInfo, PlotData, SizeInfo
 from plotql.core.result import PlotResult
+from tests.conftest import make_plot_query
 
 
 # =============================================================================
@@ -103,7 +104,7 @@ class TestMatplotlibEngine:
     @pytest.fixture
     def simple_query(self, temp_csv: Path) -> PlotQuery:
         """Create a simple PlotQuery."""
-        return PlotQuery(
+        return make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
@@ -116,7 +117,7 @@ class TestMatplotlibEngine:
         return PlotData(
             x=[1.0, 2.0, 3.0, 4.0, 5.0],
             y=[10.0, 20.0, 30.0, 40.0, 50.0],
-            query=simple_query,
+            series=simple_query.series[0],
             row_count=5,
             filtered_count=5,
         )
@@ -182,7 +183,7 @@ class TestMatplotlibEngineRender:
 
     @pytest.fixture
     def simple_query(self, temp_csv: Path) -> PlotQuery:
-        return PlotQuery(
+        return make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
@@ -194,7 +195,7 @@ class TestMatplotlibEngineRender:
         return PlotData(
             x=[1.0, 2.0, 3.0, 4.0, 5.0],
             y=[10.0, 20.0, 30.0, 40.0, 50.0],
-            query=simple_query,
+            series=simple_query.series[0],
             row_count=5,
             filtered_count=5,
         )
@@ -240,7 +241,7 @@ class TestMatplotlibEngineScatterPlot:
 
     def test_scatter_basic(self, engine, temp_csv: Path):
         """Test basic scatter plot."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
@@ -249,7 +250,7 @@ class TestMatplotlibEngineScatterPlot:
         data = PlotData(
             x=[1.0, 2.0, 3.0],
             y=[4.0, 5.0, 6.0],
-            query=query,
+            series=query.series[0],
             row_count=3,
             filtered_count=3,
         )
@@ -260,7 +261,7 @@ class TestMatplotlibEngineScatterPlot:
 
     def test_scatter_with_sizes(self, engine, temp_csv: Path):
         """Test scatter plot with marker sizes."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
@@ -270,7 +271,7 @@ class TestMatplotlibEngineScatterPlot:
         data = PlotData(
             x=[1.0, 2.0, 3.0],
             y=[4.0, 5.0, 6.0],
-            query=query,
+            series=query.series[0],
             row_count=3,
             filtered_count=3,
             marker_sizes=[1.0, 3.0, 5.0],
@@ -288,7 +289,7 @@ class TestMatplotlibEngineScatterPlot:
 
     def test_scatter_with_categorical_colors(self, engine, temp_csv: Path):
         """Test scatter plot with categorical marker colors."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
@@ -298,7 +299,7 @@ class TestMatplotlibEngineScatterPlot:
         data = PlotData(
             x=[1.0, 2.0, 3.0],
             y=[4.0, 5.0, 6.0],
-            query=query,
+            series=query.series[0],
             row_count=3,
             filtered_count=3,
             marker_colors=["blue", "green", "blue"],
@@ -315,7 +316,7 @@ class TestMatplotlibEngineScatterPlot:
 
     def test_scatter_with_continuous_colors(self, engine, temp_csv: Path):
         """Test scatter plot with continuous marker colors."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
@@ -325,7 +326,7 @@ class TestMatplotlibEngineScatterPlot:
         data = PlotData(
             x=[1.0, 2.0, 3.0],
             y=[4.0, 5.0, 6.0],
-            query=query,
+            series=query.series[0],
             row_count=3,
             filtered_count=3,
             marker_colors=["#89b4fa", "#c1d1f5", "#f9e2af"],  # Hex colors
@@ -351,7 +352,7 @@ class TestMatplotlibEngineLinePlot:
 
     def test_line_basic(self, engine, temp_csv: Path):
         """Test basic line plot."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
@@ -360,7 +361,7 @@ class TestMatplotlibEngineLinePlot:
         data = PlotData(
             x=[1.0, 2.0, 3.0, 4.0, 5.0],
             y=[10.0, 15.0, 12.0, 18.0, 20.0],
-            query=query,
+            series=query.series[0],
             row_count=5,
             filtered_count=5,
         )
@@ -371,7 +372,7 @@ class TestMatplotlibEngineLinePlot:
 
     def test_line_with_color(self, engine, temp_csv: Path):
         """Test line plot with custom color."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
@@ -381,7 +382,7 @@ class TestMatplotlibEngineLinePlot:
         data = PlotData(
             x=[1.0, 2.0, 3.0],
             y=[4.0, 5.0, 6.0],
-            query=query,
+            series=query.series[0],
             row_count=3,
             filtered_count=3,
         )
@@ -400,7 +401,7 @@ class TestMatplotlibEngineBarPlot:
 
     def test_bar_basic(self, engine, temp_csv: Path):
         """Test basic bar plot."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="category"),
             y_column=ColumnRef(name="count"),
@@ -409,7 +410,7 @@ class TestMatplotlibEngineBarPlot:
         data = PlotData(
             x=["A", "B", "C"],
             y=[10.0, 20.0, 15.0],
-            query=query,
+            series=query.series[0],
             row_count=3,
             filtered_count=3,
         )
@@ -420,7 +421,7 @@ class TestMatplotlibEngineBarPlot:
 
     def test_bar_with_color(self, engine, temp_csv: Path):
         """Test bar plot with custom color."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
@@ -430,7 +431,7 @@ class TestMatplotlibEngineBarPlot:
         data = PlotData(
             x=["X", "Y", "Z"],
             y=[5.0, 10.0, 7.0],
-            query=query,
+            series=query.series[0],
             row_count=3,
             filtered_count=3,
         )
@@ -449,7 +450,7 @@ class TestMatplotlibEngineHistPlot:
 
     def test_hist_basic(self, engine, temp_csv: Path):
         """Test basic histogram."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
@@ -458,7 +459,7 @@ class TestMatplotlibEngineHistPlot:
         data = PlotData(
             x=[1.0, 2.0, 3.0, 4.0, 5.0],  # Ignored for hist
             y=[10.0, 12.0, 11.0, 15.0, 14.0, 13.0, 16.0],  # Distribution
-            query=query,
+            series=query.series[0],
             row_count=7,
             filtered_count=7,
         )
@@ -477,7 +478,7 @@ class TestMatplotlibEngineFormatOptions:
 
     def test_title(self, engine, temp_csv: Path):
         """Test plot with custom title."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
@@ -485,7 +486,7 @@ class TestMatplotlibEngineFormatOptions:
             format=FormatOptions(title="Custom Title"),
         )
         data = PlotData(
-            x=[1.0, 2.0], y=[3.0, 4.0], query=query, row_count=2, filtered_count=2,
+            x=[1.0, 2.0], y=[3.0, 4.0], series=query.series[0], row_count=2, filtered_count=2,
         )
 
         result = engine.render(data, 400, 300)
@@ -494,7 +495,7 @@ class TestMatplotlibEngineFormatOptions:
 
     def test_axis_labels(self, engine, temp_csv: Path):
         """Test plot with custom axis labels."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
@@ -502,7 +503,7 @@ class TestMatplotlibEngineFormatOptions:
             format=FormatOptions(xlabel="Custom X", ylabel="Custom Y"),
         )
         data = PlotData(
-            x=[1.0, 2.0], y=[3.0, 4.0], query=query, row_count=2, filtered_count=2,
+            x=[1.0, 2.0], y=[3.0, 4.0], series=query.series[0], row_count=2, filtered_count=2,
         )
 
         result = engine.render(data, 400, 300)
@@ -519,7 +520,7 @@ class TestMatplotlibEngineRenderToBytes:
 
     def test_render_to_bytes(self, engine, temp_csv: Path):
         """Test render_to_bytes method."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
@@ -528,7 +529,7 @@ class TestMatplotlibEngineRenderToBytes:
         data = PlotData(
             x=[1.0, 2.0, 3.0],
             y=[4.0, 5.0, 6.0],
-            query=query,
+            series=query.series[0],
             row_count=3,
             filtered_count=3,
         )
@@ -540,7 +541,7 @@ class TestMatplotlibEngineRenderToBytes:
 
     def test_render_to_bytes_with_scale(self, engine, temp_csv: Path):
         """Test render_to_bytes with scale factor."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
@@ -549,7 +550,7 @@ class TestMatplotlibEngineRenderToBytes:
         data = PlotData(
             x=[1.0, 2.0],
             y=[3.0, 4.0],
-            query=query,
+            series=query.series[0],
             row_count=2,
             filtered_count=2,
         )
@@ -624,7 +625,7 @@ class TestMatplotlibEngineEdgeCases:
 
     def test_empty_data(self, engine, temp_csv: Path):
         """Test rendering with empty data lists."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
@@ -633,7 +634,7 @@ class TestMatplotlibEngineEdgeCases:
         data = PlotData(
             x=[],
             y=[],
-            query=query,
+            series=query.series[0],
             row_count=0,
             filtered_count=0,
         )
@@ -644,7 +645,7 @@ class TestMatplotlibEngineEdgeCases:
 
     def test_single_point(self, engine, temp_csv: Path):
         """Test rendering with single data point."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
@@ -653,7 +654,7 @@ class TestMatplotlibEngineEdgeCases:
         data = PlotData(
             x=[1.0],
             y=[2.0],
-            query=query,
+            series=query.series[0],
             row_count=1,
             filtered_count=1,
         )
@@ -664,7 +665,7 @@ class TestMatplotlibEngineEdgeCases:
 
     def test_very_small_dimensions(self, engine, temp_csv: Path):
         """Test rendering with very small dimensions."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
@@ -673,7 +674,7 @@ class TestMatplotlibEngineEdgeCases:
         data = PlotData(
             x=[1.0, 2.0],
             y=[3.0, 4.0],
-            query=query,
+            series=query.series[0],
             row_count=2,
             filtered_count=2,
         )
@@ -686,7 +687,7 @@ class TestMatplotlibEngineEdgeCases:
         """Test rendering with large dataset."""
         import random
 
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
@@ -695,7 +696,7 @@ class TestMatplotlibEngineEdgeCases:
         data = PlotData(
             x=[float(i) for i in range(1000)],
             y=[random.random() * 100 for _ in range(1000)],
-            query=query,
+            series=query.series[0],
             row_count=1000,
             filtered_count=1000,
         )
@@ -706,7 +707,7 @@ class TestMatplotlibEngineEdgeCases:
 
     def test_long_labels(self, engine, temp_csv: Path):
         """Test rendering with very long axis labels."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
@@ -720,7 +721,7 @@ class TestMatplotlibEngineEdgeCases:
         data = PlotData(
             x=[1.0, 2.0, 3.0],
             y=[4.0, 5.0, 6.0],
-            query=query,
+            series=query.series[0],
             row_count=3,
             filtered_count=3,
         )

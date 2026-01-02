@@ -15,6 +15,7 @@ from plotql.core.ast import (
     ComparisonOp,
     LogicalOp,
     PlotQuery,
+    PlotSeries,
     PlotType,
     WhereClause,
 )
@@ -59,10 +60,10 @@ class ColorInfo:
 
 @dataclass
 class PlotData:
-    """Result of executing a query - ready for plotting."""
+    """Result of executing a single series - ready for plotting."""
     x: List[float]
     y: List[float]
-    query: PlotQuery
+    series: PlotSeries  # The series this data came from
     row_count: int
     filtered_count: int
     # Optional columns for dynamic formatting
@@ -73,6 +74,12 @@ class PlotData:
     # Timestamp info for datetime axes
     x_timestamp: Optional[TimestampInfo] = None
     y_timestamp: Optional[TimestampInfo] = None
+
+    # Backward compatibility - delegate to series
+    @property
+    def query(self) -> PlotSeries:
+        """Backward compatibility alias for series."""
+        return self.series
 
 
 def load_file(path: str) -> pl.DataFrame:
@@ -208,27 +215,50 @@ def apply_aggregation(
     return result
 
 
-def execute(query: PlotQuery) -> PlotData:
+def validate_series_format_options(series: PlotSeries) -> None:
     """
-    Execute a PlotQL query and return data ready for plotting.
+    Validate that format options are compatible with the series plot type.
 
-    This function:
-    1. Loads the source file with Polars
-    2. Applies any WHERE filters
-    3. Applies aggregations if specified
-    4. Extracts x and y columns
-    5. Returns PlotData ready for visualization
+    Raises ExecutionError if invalid options are used.
+    """
+    fmt = series.format
+    plot_type = series.plot_type
+
+    # marker_color and marker_size only valid for scatter plots
+    if fmt.marker_color and plot_type != PlotType.SCATTER:
+        raise ExecutionError(
+            f"marker_color is only valid for scatter plots, not {plot_type.value}"
+        )
+    if fmt.marker_size and plot_type != PlotType.SCATTER:
+        raise ExecutionError(
+            f"marker_size is only valid for scatter plots, not {plot_type.value}"
+        )
+
+
+def _execute_series(
+    series: PlotSeries,
+    base_df: pl.DataFrame,
+    row_count: int,
+) -> PlotData:
+    """
+    Execute a single series against a base dataframe.
+
+    Args:
+        series: The series definition
+        base_df: The loaded dataframe (before any series-specific filtering)
+        row_count: Total row count of the base dataframe
+
+    Returns:
+        PlotData for this series
     """
     # Validate format options for plot type
-    validate_format_options(query)
+    validate_series_format_options(series)
 
-    # Load data
-    df = load_file(query.source)
-    row_count = len(df)
+    df = base_df
 
     # Get column names (from ColumnRef)
-    x_col_name = query.x_column.name
-    y_col_name = query.y_column.name
+    x_col_name = series.x_column.name
+    y_col_name = series.y_column.name
 
     # Validate columns exist
     for col in [x_col_name, y_col_name]:
@@ -239,20 +269,20 @@ def execute(query: PlotQuery) -> PlotData:
             )
 
     # Apply filters (before aggregation)
-    if query.filter:
-        for cond in query.filter.conditions:
+    if series.filter:
+        for cond in series.filter.conditions:
             if cond.column not in df.columns:
                 available = ", ".join(df.columns)
                 raise ExecutionError(
                     f"FILTER column '{cond.column}' not found. Available: {available}"
                 )
-        df = apply_where(df, query.filter)
+        df = apply_where(df, series.filter)
 
     filtered_count = len(df)
 
     # Apply aggregation if needed
-    if query.is_aggregate:
-        df = apply_aggregation(df, query.x_column, query.y_column)
+    if series.is_aggregate:
+        df = apply_aggregation(df, series.x_column, series.y_column)
         # After aggregation, the counts change
         filtered_count = len(df)
 
@@ -270,8 +300,8 @@ def execute(query: PlotQuery) -> PlotData:
     size_info = None
     color_info = None
 
-    fmt = query.format
-    if not query.is_aggregate:
+    fmt = series.format
+    if not series.is_aggregate:
         if fmt.marker_size:
             if fmt.marker_size in df.columns:
                 # Column reference - map values to sizes
@@ -364,7 +394,7 @@ def execute(query: PlotQuery) -> PlotData:
     return PlotData(
         x=x,
         y=y,
-        query=query,
+        series=series,
         row_count=row_count,
         filtered_count=filtered_count,
         marker_sizes=marker_sizes,
@@ -374,3 +404,27 @@ def execute(query: PlotQuery) -> PlotData:
         x_timestamp=x_timestamp,
         y_timestamp=y_timestamp,
     )
+
+
+def execute(query: PlotQuery) -> List[PlotData]:
+    """
+    Execute a PlotQL query and return data ready for plotting.
+
+    This function:
+    1. Loads the source file with Polars
+    2. For each series: applies filters, aggregations, extracts data
+    3. Returns list of PlotData (one per series) ready for visualization
+
+    Later series in the list should be rendered on top of earlier ones.
+    """
+    # Load data once
+    df = load_file(query.source)
+    row_count = len(df)
+
+    # Execute each series
+    results = []
+    for series in query.series:
+        plot_data = _execute_series(series, df, row_count)
+        results.append(plot_data)
+
+    return results

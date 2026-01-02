@@ -17,11 +17,31 @@ from plotql.core.ast import (
     FormatOptions,
     LogicalOp,
     PlotQuery,
+    PlotSeries,
     PlotType,
     WhereClause,
 )
 from plotql.core.executor import PlotData, SizeInfo, ColorInfo
 from plotql.core.parser import Token
+
+
+def make_plot_query(
+    source: str,
+    x_column: ColumnRef,
+    y_column: ColumnRef,
+    plot_type: PlotType = PlotType.SCATTER,
+    filter: WhereClause = None,
+    format: FormatOptions = None,
+) -> PlotQuery:
+    """Helper to create a PlotQuery with a single series (backward compatible API)."""
+    series = PlotSeries(
+        x_column=x_column,
+        y_column=y_column,
+        plot_type=plot_type,
+        filter=filter,
+        format=format or FormatOptions(),
+    )
+    return PlotQuery(source=source, series=[series])
 
 
 # =============================================================================
@@ -250,7 +270,7 @@ def scatter_format_options() -> FormatOptions:
 @pytest.fixture
 def simple_plot_query(temp_csv: Path) -> PlotQuery:
     """A simple PlotQuery AST."""
-    return PlotQuery(
+    return make_plot_query(
         source=str(temp_csv),
         x_column=ColumnRef(name="x"),
         y_column=ColumnRef(name="y"),
@@ -261,7 +281,7 @@ def simple_plot_query(temp_csv: Path) -> PlotQuery:
 @pytest.fixture
 def line_plot_query(temp_csv: Path) -> PlotQuery:
     """A line plot query."""
-    return PlotQuery(
+    return make_plot_query(
         source=str(temp_csv),
         x_column=ColumnRef(name="x"),
         y_column=ColumnRef(name="y"),
@@ -273,7 +293,7 @@ def line_plot_query(temp_csv: Path) -> PlotQuery:
 @pytest.fixture
 def bar_plot_query(temp_csv_categorical: Path) -> PlotQuery:
     """A bar plot query with aggregation."""
-    return PlotQuery(
+    return make_plot_query(
         source=str(temp_csv_categorical),
         x_column=ColumnRef(name="group"),
         y_column=ColumnRef(name="amount", aggregate=AggregateFunc.SUM),
@@ -284,7 +304,7 @@ def bar_plot_query(temp_csv_categorical: Path) -> PlotQuery:
 @pytest.fixture
 def filtered_plot_query(temp_csv: Path) -> PlotQuery:
     """A query with FILTER clause."""
-    return PlotQuery(
+    return make_plot_query(
         source=str(temp_csv),
         x_column=ColumnRef(name="x"),
         y_column=ColumnRef(name="y"),
@@ -305,7 +325,7 @@ def simple_plot_data(simple_plot_query: PlotQuery) -> PlotData:
     return PlotData(
         x=[1.0, 2.0, 3.0, 4.0, 5.0],
         y=[10.0, 20.0, 30.0, 40.0, 50.0],
-        query=simple_plot_query,
+        series=simple_plot_query.series[0],
         row_count=5,
         filtered_count=5,
     )
@@ -317,7 +337,7 @@ def plot_data_with_sizes(simple_plot_query: PlotQuery) -> PlotData:
     return PlotData(
         x=[1.0, 2.0, 3.0, 4.0, 5.0],
         y=[10.0, 20.0, 30.0, 40.0, 50.0],
-        query=simple_plot_query,
+        series=simple_plot_query.series[0],
         row_count=5,
         filtered_count=5,
         marker_sizes=[1.0, 2.0, 3.0, 4.0, 5.0],
@@ -336,7 +356,7 @@ def plot_data_with_colors(simple_plot_query: PlotQuery) -> PlotData:
     return PlotData(
         x=[1.0, 2.0, 3.0, 4.0, 5.0],
         y=[10.0, 20.0, 30.0, 40.0, 50.0],
-        query=simple_plot_query,
+        series=simple_plot_query.series[0],
         row_count=5,
         filtered_count=5,
         marker_colors=["blue", "green", "yellow", "pink", "teal"],

@@ -87,8 +87,13 @@ logger = logging.getLogger(__name__)
 
 
 EXAMPLE_QUERY = """\
-WITH 'examples/trades.csv'
-PLOT price AGAINST received_at
+WITH 'example/trades.csv'
+PLOT 
+    price AGAINST received_at
+PLOT
+    price AGAINST received_at
+    FILTER user_id = 'foo'
+    FORMAT marker_size = 5
 """
 
 
@@ -432,7 +437,7 @@ class PlotPanel(Static):
 
         return (px_width, px_height)
 
-    def render_plot(self, data: PlotData) -> None:
+    def render_plot(self, data: List[PlotData]) -> None:
         """Render plot from query results using the configured engine."""
         try:
             # Get current widget size in pixels
@@ -478,13 +483,21 @@ class StatusBar(Static):
     def __init__(self):
         super().__init__("Ready - Press F5 to execute", id="status")
 
-    def set_success(self, data: PlotData) -> None:
-        filtered = data.filtered_count
-        total = data.row_count
-        if filtered == total:
-            self.update(f"[green]OK[/] - {total} rows")
+    def set_success(self, data_list: List[PlotData]) -> None:
+        # Use first series for row counts (all series share same base data)
+        first = data_list[0]
+        filtered = first.filtered_count
+        total = first.row_count
+        series_count = len(data_list)
+
+        if series_count == 1:
+            if filtered == total:
+                self.update(f"[green]OK[/] - {total} rows")
+            else:
+                self.update(f"[green]OK[/] - {filtered}/{total} rows (filtered)")
         else:
-            self.update(f"[green]OK[/] - {filtered}/{total} rows (filtered)")
+            # Show series count for multi-series queries
+            self.update(f"[green]OK[/] - {total} rows, {series_count} series")
 
     def set_error(self, message: str) -> None:
         # Truncate long errors

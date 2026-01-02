@@ -16,6 +16,7 @@ from plotql.core.ast import (
     FormatOptions,
     LogicalOp,
     PlotQuery,
+    PlotSeries,
     PlotType,
     WhereClause,
 )
@@ -28,8 +29,9 @@ from plotql.core.executor import (
     apply_where,
     execute,
     load_file,
-    validate_format_options,
+    validate_series_format_options,
 )
+from tests.conftest import make_plot_query
 
 
 # =============================================================================
@@ -310,7 +312,7 @@ class TestValidateFormatOptions:
 
     def test_scatter_with_marker_color_valid(self, temp_csv: Path):
         """Test marker_color is valid for scatter plot."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
@@ -318,11 +320,11 @@ class TestValidateFormatOptions:
             format=FormatOptions(marker_color="blue"),
         )
         # Should not raise
-        validate_format_options(query)
+        validate_series_format_options(query.series[0])
 
     def test_line_with_marker_color_invalid(self, temp_csv: Path):
         """Test marker_color is invalid for line plot."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
@@ -330,23 +332,23 @@ class TestValidateFormatOptions:
             format=FormatOptions(marker_color="blue"),
         )
         with pytest.raises(ExecutionError) as exc_info:
-            validate_format_options(query)
+            validate_series_format_options(query.series[0])
         assert "marker_color is only valid for scatter" in str(exc_info.value)
 
     def test_scatter_with_marker_size_valid(self, temp_csv: Path):
         """Test marker_size is valid for scatter plot."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
             plot_type=PlotType.SCATTER,
             format=FormatOptions(marker_size="3"),
         )
-        validate_format_options(query)
+        validate_series_format_options(query.series[0])
 
     def test_bar_with_marker_size_invalid(self, temp_csv: Path):
         """Test marker_size is invalid for bar plot."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
@@ -354,12 +356,12 @@ class TestValidateFormatOptions:
             format=FormatOptions(marker_size="3"),
         )
         with pytest.raises(ExecutionError) as exc_info:
-            validate_format_options(query)
+            validate_series_format_options(query.series[0])
         assert "marker_size is only valid for scatter" in str(exc_info.value)
 
     def test_hist_with_marker_color_invalid(self, temp_csv: Path):
         """Test marker_color is invalid for histogram."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
@@ -367,7 +369,7 @@ class TestValidateFormatOptions:
             format=FormatOptions(marker_color="red"),
         )
         with pytest.raises(ExecutionError) as exc_info:
-            validate_format_options(query)
+            validate_series_format_options(query.series[0])
         assert "marker_color is only valid for scatter" in str(exc_info.value)
 
 
@@ -380,13 +382,14 @@ class TestExecute:
 
     def test_execute_simple_query(self, temp_csv: Path):
         """Test executing a simple query."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
             plot_type=PlotType.SCATTER,
         )
-        result = execute(query)
+        results = execute(query)
+        result = results[0]
 
         assert isinstance(result, PlotData)
         assert result.x == [1, 2, 3, 4, 5]
@@ -396,7 +399,7 @@ class TestExecute:
 
     def test_execute_with_filter(self, temp_csv: Path):
         """Test executing with FILTER clause."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
@@ -405,7 +408,8 @@ class TestExecute:
                 Condition(column="x", op=ComparisonOp.GT, value=2)
             ]),
         )
-        result = execute(query)
+        results = execute(query)
+        result = results[0]
 
         assert result.row_count == 5
         assert result.filtered_count == 3
@@ -413,13 +417,14 @@ class TestExecute:
 
     def test_execute_with_aggregation(self, temp_csv_categorical: Path):
         """Test executing with aggregation."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv_categorical),
             x_column=ColumnRef(name="group"),
             y_column=ColumnRef(name="amount", aggregate=AggregateFunc.SUM),
             plot_type=PlotType.BAR,
         )
-        result = execute(query)
+        results = execute(query)
+        result = results[0]
 
         assert result.filtered_count == 3  # 3 groups
         # Check values (groups may be in any order)
@@ -428,7 +433,7 @@ class TestExecute:
 
     def test_execute_with_filter_and_aggregation(self, temp_csv_categorical: Path):
         """Test executing with both FILTER and aggregation."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv_categorical),
             x_column=ColumnRef(name="group"),
             y_column=ColumnRef(name="amount", aggregate=AggregateFunc.SUM),
@@ -437,14 +442,15 @@ class TestExecute:
                 Condition(column="amount", op=ComparisonOp.GT, value=20)
             ]),
         )
-        result = execute(query)
+        results = execute(query)
+        result = results[0]
 
         # Filter removes amount=10,20, leaving 30,40,50,60 in groups B and C
         assert result.filtered_count == 2  # B and C
 
     def test_execute_column_not_found(self, temp_csv: Path):
         """Test error when column doesn't exist."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="nonexistent"),
             y_column=ColumnRef(name="y"),
@@ -456,7 +462,7 @@ class TestExecute:
 
     def test_execute_filter_column_not_found(self, temp_csv: Path):
         """Test error when FILTER column doesn't exist."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
@@ -479,14 +485,15 @@ class TestExecuteWithDynamicFormatting:
 
     def test_marker_size_column_reference(self, temp_csv: Path):
         """Test marker_size with column reference."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
             plot_type=PlotType.SCATTER,
             format=FormatOptions(marker_size="value"),
         )
-        result = execute(query)
+        results = execute(query)
+        result = results[0]
 
         assert result.marker_sizes is not None
         assert len(result.marker_sizes) == 5
@@ -496,21 +503,22 @@ class TestExecuteWithDynamicFormatting:
 
     def test_marker_size_literal_value(self, temp_csv: Path):
         """Test marker_size with literal numeric value."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
             plot_type=PlotType.SCATTER,
             format=FormatOptions(marker_size="3"),
         )
-        result = execute(query)
+        results = execute(query)
+        result = results[0]
 
         assert result.marker_sizes is not None
         assert all(s == 3.0 for s in result.marker_sizes)
 
     def test_marker_size_out_of_range_error(self, temp_csv: Path):
         """Test error when marker_size literal is out of range."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
@@ -523,7 +531,7 @@ class TestExecuteWithDynamicFormatting:
 
     def test_marker_size_invalid_value_error(self, temp_csv: Path):
         """Test error when marker_size is neither column nor valid number."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
@@ -536,14 +544,15 @@ class TestExecuteWithDynamicFormatting:
 
     def test_marker_color_column_reference(self, temp_csv: Path):
         """Test marker_color with column reference."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
             plot_type=PlotType.SCATTER,
             format=FormatOptions(marker_color="category"),
         )
-        result = execute(query)
+        results = execute(query)
+        result = results[0]
 
         assert result.marker_colors is not None
         assert len(result.marker_colors) == 5
@@ -552,21 +561,22 @@ class TestExecuteWithDynamicFormatting:
 
     def test_marker_color_literal_value(self, temp_csv: Path):
         """Test marker_color with literal color name."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
             plot_type=PlotType.SCATTER,
             format=FormatOptions(marker_color="blue"),
         )
-        result = execute(query)
+        results = execute(query)
+        result = results[0]
 
         assert result.marker_colors is not None
         assert all(c == "blue" for c in result.marker_colors)
 
     def test_marker_color_invalid_value_error(self, temp_csv: Path):
         """Test error when marker_color is neither column nor valid color."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
@@ -579,14 +589,15 @@ class TestExecuteWithDynamicFormatting:
 
     def test_continuous_color_info(self, temp_csv: Path):
         """Test ColorInfo for continuous numeric column."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
             plot_type=PlotType.SCATTER,
             format=FormatOptions(marker_color="value"),
         )
-        result = execute(query)
+        results = execute(query)
+        result = results[0]
 
         assert result.color_info is not None
         assert result.color_info.is_continuous is True
@@ -595,14 +606,15 @@ class TestExecuteWithDynamicFormatting:
 
     def test_categorical_color_info(self, temp_csv: Path):
         """Test ColorInfo for categorical column."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
             plot_type=PlotType.SCATTER,
             format=FormatOptions(marker_color="category"),
         )
-        result = execute(query)
+        results = execute(query)
+        result = results[0]
 
         assert result.color_info is not None
         assert result.color_info.is_continuous is False
@@ -618,26 +630,28 @@ class TestExecuteWithTimestamps:
 
     def test_timestamp_detection(self, temp_csv_with_timestamps: Path):
         """Test that timestamps are detected."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv_with_timestamps),
             x_column=ColumnRef(name="timestamp"),
             y_column=ColumnRef(name="value"),
             plot_type=PlotType.LINE,
         )
-        result = execute(query)
+        results = execute(query)
+        result = results[0]
 
         assert result.x_timestamp is not None
         assert result.x_timestamp.column_name == "timestamp"
 
     def test_no_timestamp_for_numeric(self, temp_csv: Path):
         """Test that numeric columns don't get timestamp info."""
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(temp_csv),
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
             plot_type=PlotType.SCATTER,
         )
-        result = execute(query)
+        results = execute(query)
+        result = results[0]
 
         assert result.x_timestamp is None
         assert result.y_timestamp is None
@@ -655,7 +669,7 @@ class TestPlotData:
         data = PlotData(
             x=[1.0, 2.0, 3.0],
             y=[4.0, 5.0, 6.0],
-            query=simple_plot_query,
+            series=simple_plot_query.series[0],
             row_count=3,
             filtered_count=3,
         )
@@ -669,7 +683,7 @@ class TestPlotData:
         data = PlotData(
             x=[1.0, 2.0],
             y=[3.0, 4.0],
-            query=simple_plot_query,
+            series=simple_plot_query.series[0],
             row_count=2,
             filtered_count=2,
             marker_sizes=[1.0, 2.0],
@@ -751,13 +765,14 @@ class TestExecuteWithRealData:
         if not trades_csv.exists():
             pytest.skip("trades.csv not found")
 
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(trades_csv),
             x_column=ColumnRef(name="received_at"),
             y_column=ColumnRef(name="price"),
             plot_type=PlotType.SCATTER,
         )
-        result = execute(query)
+        results = execute(query)
+        result = results[0]
 
         assert result.row_count > 0
         assert len(result.x) == len(result.y)
@@ -768,7 +783,7 @@ class TestExecuteWithRealData:
         if not trades_csv.exists():
             pytest.skip("trades.csv not found")
 
-        query = PlotQuery(
+        query = make_plot_query(
             source=str(trades_csv),
             x_column=ColumnRef(name="received_at"),
             y_column=ColumnRef(name="price"),
@@ -777,7 +792,8 @@ class TestExecuteWithRealData:
                 Condition(column="price", op=ComparisonOp.GT, value=10)
             ]),
         )
-        result = execute(query)
+        results = execute(query)
+        result = results[0]
 
         assert result.filtered_count <= result.row_count
         assert all(p > 10 for p in result.y)

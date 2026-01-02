@@ -680,7 +680,7 @@ class TestParserErrors:
         """Test error when PLOT is missing."""
         with pytest.raises(ParseError) as exc_info:
             parse("WITH 'data.csv'")
-        assert "Expected PLOT" in str(exc_info.value)
+        assert "PLOT" in str(exc_info.value)
 
     def test_missing_against(self):
         """Test error when AGAINST is missing."""
@@ -822,3 +822,181 @@ class TestParserClass:
         token = parser.match("AND", "OR")
         assert token is not None
         assert token.type == "AND"
+
+
+# =============================================================================
+# Multiple Series Tests
+# =============================================================================
+
+class TestParserMultipleSeries:
+    """Test parsing queries with multiple PLOT clauses (series)."""
+
+    def test_two_plot_clauses_basic(self):
+        """Test parsing query with two PLOT clauses."""
+        query = """
+        WITH 'data.csv'
+        PLOT price AGAINST time
+        PLOT volume AGAINST time
+        """
+        result = parse(query)
+
+        assert result.source == "data.csv"
+        assert len(result.series) == 2
+        assert result.series[0].y_column.name == "price"
+        assert result.series[0].x_column.name == "time"
+        assert result.series[1].y_column.name == "volume"
+        assert result.series[1].x_column.name == "time"
+
+    def test_second_plot_with_filter(self):
+        """Test that FILTER applies to the preceding PLOT clause."""
+        query = """
+        WITH 'data.csv'
+        PLOT price AGAINST time
+        PLOT price AGAINST time
+            FILTER user_id = 'foo'
+        """
+        result = parse(query)
+
+        assert len(result.series) == 2
+        assert result.series[0].filter is None
+        assert result.series[1].filter is not None
+        assert result.series[1].filter.conditions[0].column == "user_id"
+        assert result.series[1].filter.conditions[0].value == "foo"
+
+    def test_second_plot_with_format(self):
+        """Test that FORMAT applies to the preceding PLOT clause."""
+        query = """
+        WITH 'data.csv'
+        PLOT price AGAINST time
+        PLOT price AGAINST time
+            FORMAT marker_size = 5
+        """
+        result = parse(query)
+
+        assert len(result.series) == 2
+        assert result.series[0].format.marker_size is None
+        assert result.series[1].format.marker_size == "5"
+
+    def test_second_plot_with_filter_and_format(self):
+        """Test PLOT with both FILTER and FORMAT."""
+        query = """
+        WITH 'data.csv'
+        PLOT price AGAINST time
+        PLOT price AGAINST time
+            FILTER user_id = 'foo'
+            FORMAT marker_size = 5
+        """
+        result = parse(query)
+
+        assert len(result.series) == 2
+        assert result.series[1].filter is not None
+        assert result.series[1].format.marker_size == "5"
+
+    def test_multiple_series_with_plot_types(self):
+        """Test multiple PLOT clauses with AS type declarations."""
+        query = """
+        WITH 'data.csv'
+        PLOT price AGAINST time AS 'line'
+        PLOT volume AGAINST time AS 'scatter'
+        """
+        result = parse(query)
+
+        assert len(result.series) == 2
+        assert result.series[0].plot_type == PlotType.LINE
+        assert result.series[1].plot_type == PlotType.SCATTER
+
+    def test_three_plot_clauses(self):
+        """Test parsing query with three PLOT clauses."""
+        query = """
+        WITH 'data.csv'
+        PLOT a AGAINST x
+        PLOT b AGAINST x
+        PLOT c AGAINST x
+        """
+        result = parse(query)
+
+        assert len(result.series) == 3
+        assert result.series[0].y_column.name == "a"
+        assert result.series[1].y_column.name == "b"
+        assert result.series[2].y_column.name == "c"
+
+    def test_first_series_with_filter_format(self):
+        """Test first PLOT clause can have FILTER and FORMAT too."""
+        query = """
+        WITH 'data.csv'
+        PLOT price AGAINST time
+            FILTER category = 'A'
+            FORMAT marker_color = 'blue'
+        PLOT price AGAINST time
+            FILTER category = 'B'
+            FORMAT marker_color = 'red'
+        """
+        result = parse(query)
+
+        assert len(result.series) == 2
+        assert result.series[0].filter.conditions[0].value == "A"
+        assert result.series[0].format.marker_color == "blue"
+        assert result.series[1].filter.conditions[0].value == "B"
+        assert result.series[1].format.marker_color == "red"
+
+    def test_mixed_aggregated_and_raw(self):
+        """Test mixing aggregated and non-aggregated series."""
+        query = """
+        WITH 'data.csv'
+        PLOT count(id) AGAINST category AS 'bar'
+        PLOT avg(value) AGAINST category AS 'line'
+        """
+        result = parse(query)
+
+        assert len(result.series) == 2
+        assert result.series[0].y_column.is_aggregate
+        assert result.series[0].y_column.aggregate == AggregateFunc.COUNT
+        assert result.series[1].y_column.is_aggregate
+        assert result.series[1].y_column.aggregate == AggregateFunc.AVG
+
+    def test_backward_compatible_single_plot(self):
+        """Test that single PLOT queries still work (backward compatibility)."""
+        query = "WITH 'data.csv' PLOT y AGAINST x"
+        result = parse(query)
+
+        # Should have exactly one series
+        assert len(result.series) == 1
+        assert result.series[0].y_column.name == "y"
+        assert result.series[0].x_column.name == "x"
+
+    def test_backward_compatible_with_filter_format(self):
+        """Test backward compatibility with FILTER and FORMAT."""
+        query = "WITH 'data.csv' PLOT y AGAINST x FILTER a = 1 FORMAT title = 'Test'"
+        result = parse(query)
+
+        assert len(result.series) == 1
+        assert result.series[0].filter is not None
+        assert result.series[0].format.title == "Test"
+
+    def test_example_from_todo(self):
+        """Test the exact example from the todo.md."""
+        query = """
+        WITH 'example/trades.csv'
+        PLOT
+            price AGAINST received_at
+        PLOT
+            price AGAINST received_at
+            FILTER user_id = 'foo'
+            FORMAT marker_size = 5
+        """
+        result = parse(query)
+
+        assert result.source == "example/trades.csv"
+        assert len(result.series) == 2
+
+        # First series: all data, no filter/format
+        assert result.series[0].y_column.name == "price"
+        assert result.series[0].x_column.name == "received_at"
+        assert result.series[0].filter is None
+
+        # Second series: filtered with custom marker size
+        assert result.series[1].y_column.name == "price"
+        assert result.series[1].x_column.name == "received_at"
+        assert result.series[1].filter is not None
+        assert result.series[1].filter.conditions[0].column == "user_id"
+        assert result.series[1].format.marker_size == "5"

@@ -92,21 +92,13 @@ class FormatOptions:
 
 
 @dataclass
-class PlotQuery:
+class PlotSeries:
     """
-    Complete PlotQL query AST.
+    A single plot series definition.
 
-    Example query:
-        WITH 'trades.csv'
-        PLOT price AGAINST time AS 'line'
-        FILTER symbol = 'AAPL' AND volume > 1000
-        FORMAT marker_color = 'red' AND line_color = 'blue'
-
-    With aggregation:
-        WITH 'trades.csv'
-        PLOT count(price) AGAINST symbol AS 'bar'
+    Each series has its own columns, plot type, filter, and format options.
+    Multiple series can be layered on the same chart.
     """
-    source: str  # File path
     x_column: ColumnRef
     y_column: ColumnRef
     plot_type: PlotType = PlotType.SCATTER
@@ -118,16 +110,68 @@ class PlotQuery:
         """True if either axis uses an aggregation function."""
         return self.x_column.is_aggregate or self.y_column.is_aggregate
 
+
+@dataclass
+class PlotQuery:
+    """
+    Complete PlotQL query AST.
+
+    Example query with single series:
+        WITH 'trades.csv'
+        PLOT price AGAINST time AS 'line'
+        FILTER symbol = 'AAPL' AND volume > 1000
+        FORMAT marker_color = 'red' AND line_color = 'blue'
+
+    Example query with multiple series (later series plot on top):
+        WITH 'trades.csv'
+        PLOT price AGAINST time
+        PLOT price AGAINST time
+            FILTER user_id = 'foo'
+            FORMAT marker_size = 5
+    """
+    source: str  # File path
+    series: List[PlotSeries] = field(default_factory=list)
+
+    # Backward compatibility properties - delegate to first series
+    @property
+    def x_column(self) -> ColumnRef:
+        """X column of the first series (backward compatibility)."""
+        return self.series[0].x_column if self.series else ColumnRef(name="")
+
+    @property
+    def y_column(self) -> ColumnRef:
+        """Y column of the first series (backward compatibility)."""
+        return self.series[0].y_column if self.series else ColumnRef(name="")
+
+    @property
+    def plot_type(self) -> PlotType:
+        """Plot type of the first series (backward compatibility)."""
+        return self.series[0].plot_type if self.series else PlotType.SCATTER
+
+    @property
+    def filter(self) -> Optional[WhereClause]:
+        """Filter of the first series (backward compatibility)."""
+        return self.series[0].filter if self.series else None
+
+    @property
+    def format(self) -> FormatOptions:
+        """Format options of the first series (backward compatibility)."""
+        return self.series[0].format if self.series else FormatOptions()
+
+    @property
+    def is_aggregate(self) -> bool:
+        """True if any series uses an aggregation function."""
+        return any(s.is_aggregate for s in self.series)
+
     def __repr__(self) -> str:
-        parts = [
-            f"WITH '{self.source}'",
-            f"PLOT {self.y_column} AGAINST {self.x_column} AS '{self.plot_type.value}'",
-        ]
-        if self.filter:
-            conds = []
-            for i, cond in enumerate(self.filter.conditions):
-                conds.append(f"{cond.column} {cond.op.value} {cond.value!r}")
-                if i < len(self.filter.operators):
-                    conds.append(self.filter.operators[i].value)
-            parts.append("FILTER " + " ".join(conds))
+        parts = [f"WITH '{self.source}'"]
+        for s in self.series:
+            parts.append(f"PLOT {s.y_column} AGAINST {s.x_column} AS '{s.plot_type.value}'")
+            if s.filter:
+                conds = []
+                for i, cond in enumerate(s.filter.conditions):
+                    conds.append(f"{cond.column} {cond.op.value} {cond.value!r}")
+                    if i < len(s.filter.operators):
+                        conds.append(s.filter.operators[i].value)
+                parts.append("    FILTER " + " ".join(conds))
         return "\n".join(parts)

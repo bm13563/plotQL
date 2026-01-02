@@ -5,6 +5,7 @@ Tests all AST node types, enums, and their behaviors.
 """
 import pytest
 
+from tests.conftest import make_plot_query
 from plotql.core.ast import (
     AggregateFunc,
     ColumnRef,
@@ -13,6 +14,7 @@ from plotql.core.ast import (
     FormatOptions,
     LogicalOp,
     PlotQuery,
+    PlotSeries,
     PlotType,
     WhereClause,
 )
@@ -379,7 +381,7 @@ class TestPlotQuery:
 
     def test_minimal_plot_query(self):
         """Test creating a minimal PlotQuery."""
-        query = PlotQuery(
+        query = make_plot_query(
             source="data.csv",
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
@@ -393,7 +395,7 @@ class TestPlotQuery:
 
     def test_plot_query_with_plot_type(self):
         """Test PlotQuery with specific plot type."""
-        query = PlotQuery(
+        query = make_plot_query(
             source="data.csv",
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
@@ -406,7 +408,7 @@ class TestPlotQuery:
         where = WhereClause(
             conditions=[Condition(column="x", op=ComparisonOp.GT, value=0)],
         )
-        query = PlotQuery(
+        query = make_plot_query(
             source="data.csv",
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
@@ -418,7 +420,7 @@ class TestPlotQuery:
     def test_plot_query_with_format(self):
         """Test PlotQuery with format options."""
         fmt = FormatOptions(title="My Plot")
-        query = PlotQuery(
+        query = make_plot_query(
             source="data.csv",
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
@@ -428,7 +430,7 @@ class TestPlotQuery:
 
     def test_is_aggregate_false_both_simple(self):
         """Test is_aggregate when both columns are simple."""
-        query = PlotQuery(
+        query = make_plot_query(
             source="data.csv",
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
@@ -437,7 +439,7 @@ class TestPlotQuery:
 
     def test_is_aggregate_true_y_aggregate(self):
         """Test is_aggregate when y column has aggregation."""
-        query = PlotQuery(
+        query = make_plot_query(
             source="data.csv",
             x_column=ColumnRef(name="category"),
             y_column=ColumnRef(name="value", aggregate=AggregateFunc.SUM),
@@ -446,7 +448,7 @@ class TestPlotQuery:
 
     def test_is_aggregate_true_x_aggregate(self):
         """Test is_aggregate when x column has aggregation."""
-        query = PlotQuery(
+        query = make_plot_query(
             source="data.csv",
             x_column=ColumnRef(name="value", aggregate=AggregateFunc.AVG),
             y_column=ColumnRef(name="y"),
@@ -455,7 +457,7 @@ class TestPlotQuery:
 
     def test_repr_simple(self):
         """Test __repr__ for simple query."""
-        query = PlotQuery(
+        query = make_plot_query(
             source="data.csv",
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
@@ -467,7 +469,7 @@ class TestPlotQuery:
 
     def test_repr_with_aggregation(self):
         """Test __repr__ with aggregation."""
-        query = PlotQuery(
+        query = make_plot_query(
             source="data.csv",
             x_column=ColumnRef(name="category"),
             y_column=ColumnRef(name="price", aggregate=AggregateFunc.COUNT),
@@ -486,7 +488,7 @@ class TestPlotQuery:
             ],
             operators=[LogicalOp.AND],
         )
-        query = PlotQuery(
+        query = make_plot_query(
             source="data.csv",
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
@@ -500,13 +502,13 @@ class TestPlotQuery:
 
     def test_plot_query_equality(self):
         """Test PlotQuery equality."""
-        query1 = PlotQuery(
+        query1 = make_plot_query(
             source="data.csv",
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
             plot_type=PlotType.LINE,
         )
-        query2 = PlotQuery(
+        query2 = make_plot_query(
             source="data.csv",
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
@@ -560,7 +562,7 @@ class TestEdgeCases:
 
     def test_plot_query_source_with_path(self):
         """Test PlotQuery with full file path."""
-        query = PlotQuery(
+        query = make_plot_query(
             source="/path/to/data/file.csv",
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),

@@ -26,6 +26,7 @@ from plotql.core.ast import (
     FormatOptions,
     LogicalOp,
     PlotQuery,
+    PlotSeries,
     PlotType,
     WhereClause,
 )
@@ -145,9 +146,24 @@ class Parser:
     def parse(self) -> PlotQuery:
         """Parse a complete PlotQL query."""
         source = self.parse_with_clause()
-        x_col, y_col, plot_type = self.parse_plot_clause()
-        filter_clause = self.parse_filter_clause()
-        format_opts = self.parse_format_clause()
+
+        # Parse one or more series (PLOT clauses with optional FILTER/FORMAT)
+        series_list: List[PlotSeries] = []
+        while self.current and self.current.type == "PLOT":
+            x_col, y_col, plot_type = self.parse_plot_clause()
+            filter_clause = self.parse_filter_clause()
+            format_opts = self.parse_format_clause()
+
+            series_list.append(PlotSeries(
+                x_column=x_col,
+                y_column=y_col,
+                plot_type=plot_type,
+                filter=filter_clause,
+                format=format_opts,
+            ))
+
+        if not series_list:
+            raise ParseError("Expected at least one PLOT clause")
 
         if self.current is not None:
             raise ParseError(
@@ -157,11 +173,7 @@ class Parser:
 
         return PlotQuery(
             source=source,
-            x_column=x_col,
-            y_column=y_col,
-            plot_type=plot_type,
-            filter=filter_clause,
-            format=format_opts,
+            series=series_list,
         )
 
     def parse_with_clause(self) -> str:

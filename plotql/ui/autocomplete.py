@@ -91,6 +91,16 @@ def get_context(text: str, cursor_pos: int) -> Tuple[str, str, Optional[str]]:
     if "FORMAT" in before_upper:
         last_format = before_upper.rfind("FORMAT")
         after_format = before[last_format:]
+        # Check if FORMAT clause looks complete (has key = value and ends with space/newline)
+        # Pattern: FORMAT key = value (with possible AND key = value chains)
+        format_complete = re.search(
+            r"FORMAT\s+(\w+\s*=\s*(?:'[^']*'|\"[^\"]*\"|\w+)(?:\s+AND\s+\w+\s*=\s*(?:'[^']*'|\"[^\"]*\"|\w+))*)\s+$",
+            before, re.IGNORECASE
+        )
+        if format_complete:
+            # FORMAT clause is complete - suggest PLOT for new series, AND for more format options
+            return ("after_format", partial, detected_plot_type)
+
         # After = sign, check what kind of value is expected
         eq_match = re.search(r"(\w+)\s*=\s*[^=]*$", after_format)
         if eq_match:
@@ -378,14 +388,16 @@ class AutoCompleter:
                 completions.append(Completion("AGAINST", "AGAINST", "keyword"))
 
         elif context == "after_against_col":
-            # After AGAINST column, AS/FILTER/FORMAT are valid
-            for kw in ["AS", "FILTER", "FORMAT"]:
+            # After AGAINST column, AS/FILTER/FORMAT/PLOT are valid
+            # PLOT starts a new series
+            for kw in ["AS", "FILTER", "FORMAT", "PLOT"]:
                 if kw.startswith(partial_upper) or not partial:
                     completions.append(Completion(kw, kw, "keyword"))
 
         elif context == "after_plot_type":
-            # After AS 'type', only FILTER or FORMAT are valid
-            for kw in ["FILTER", "FORMAT"]:
+            # After AS 'type', FILTER/FORMAT/PLOT are valid
+            # PLOT starts a new series
+            for kw in ["FILTER", "FORMAT", "PLOT"]:
                 if kw.startswith(partial_upper) or not partial:
                     completions.append(Completion(kw, kw, "keyword"))
 
@@ -412,8 +424,8 @@ class AutoCompleter:
             for col in self._cached_columns:
                 if col.lower().startswith(partial_lower) or not partial:
                     completions.append(Completion(col, col, "column"))
-            # Also suggest AND/OR/FORMAT to continue
-            for kw in ["AND", "OR", "FORMAT"]:
+            # Also suggest AND/OR/FORMAT/PLOT to continue
+            for kw in ["AND", "OR", "FORMAT", "PLOT"]:
                 if kw.startswith(partial_upper) or not partial:
                     completions.append(Completion(kw, kw, "keyword"))
 
@@ -439,6 +451,12 @@ class AutoCompleter:
             for col in self._cached_columns:
                 if col.lower().startswith(partial_lower) or not partial:
                     completions.append(Completion(col, col, "column"))
+
+        elif context == "after_format":
+            # After FORMAT value, can add more options with AND or start new series with PLOT
+            for kw in ["AND", "PLOT"]:
+                if kw.startswith(partial_upper) or not partial:
+                    completions.append(Completion(kw, kw, "keyword"))
 
         # Filter and sort completions
         seen = set()
