@@ -143,9 +143,9 @@ class MatplotlibEngine(Engine):
         ax.grid(True, color=self._COLORS["grid"], linestyle='-', linewidth=0.5, alpha=0.5)
         ax.set_axisbelow(True)
 
-        # Plot each series (later series render on top)
-        for plot_data in data_list:
-            self._plot_series(ax, plot_data, fig, LABEL_SIZE, TICK_SIZE, marker_color)
+        # Plot each series (later series render on top via zorder)
+        for idx, plot_data in enumerate(data_list):
+            self._plot_series(ax, plot_data, fig, LABEL_SIZE, TICK_SIZE, marker_color, zorder=idx + 1)
 
         # Set labels and title
         ax.set_xlabel(xlabel, fontsize=LABEL_SIZE, color=self._COLORS["text"])
@@ -194,6 +194,7 @@ class MatplotlibEngine(Engine):
         label_size: int,
         tick_size: int,
         default_marker_color: str,
+        zorder: int = 1,
     ) -> None:
         """Plot a single series on the given axes."""
         series = data.series
@@ -230,6 +231,7 @@ class MatplotlibEngine(Engine):
                 edgecolors='none',
                 marker='s',  # Square marker - no antialiasing needed for straight edges
                 linewidths=0,
+                zorder=zorder,
             )
             scatter.set_antialiased(False)
 
@@ -358,6 +360,7 @@ class MatplotlibEngine(Engine):
                 solid_capstyle='round',
                 solid_joinstyle='round',
                 antialiased=False,  # Crisp lines
+                zorder=zorder,
             )
 
         elif series.plot_type == PlotType.BAR:
@@ -367,6 +370,7 @@ class MatplotlibEngine(Engine):
                 color=line_color,
                 alpha=0.8,
                 edgecolor='none',
+                zorder=zorder,
             )
 
         elif series.plot_type == PlotType.HIST:
@@ -376,6 +380,7 @@ class MatplotlibEngine(Engine):
                 alpha=0.8,
                 edgecolor=self._COLORS["background"],
                 linewidth=0.5,
+                zorder=zorder,
             )
 
     def render(
