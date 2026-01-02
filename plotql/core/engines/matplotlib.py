@@ -205,16 +205,16 @@ class MatplotlibEngine(Engine):
                     colors = [self.get_color(c) for c in data.marker_colors]
 
             # Handle marker sizes (input is 1-5, map to matplotlib point sizes)
-            # Size 1 -> 60pt, Size 5 -> 180pt for chunky retro aesthetic
+            # Size 1 -> 20pt, Size 5 -> 100pt - smaller with wider spacing
             sizes = None
             if data.marker_sizes:
-                sizes = [60 + (s - 1) * 30 for s in data.marker_sizes]
+                sizes = [20 + (s - 1) * 20 for s in data.marker_sizes]
 
             scatter = ax.scatter(
                 data.x,
                 data.y,
                 c=colors,
-                s=sizes if sizes else 80,  # Bigger default for visibility
+                s=sizes if sizes else 40,  # Default size=2 (20 + 1*20 = 40)
                 alpha=1.0,
                 edgecolors='none',
                 marker='s',  # Square marker - no antialiasing needed for straight edges
