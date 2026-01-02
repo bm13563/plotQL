@@ -1,0 +1,6 @@
+- Auto detect types /
+- Lines with markers /
+- F6 for plotly
+- Fix Copy + Paste keybindings
+- Multiple plot support
+- Alias files

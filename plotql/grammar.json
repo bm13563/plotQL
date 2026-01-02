@@ -1,0 +1,19 @@
+{
+  "keywords": [
+    "WITH", "PLOT", "AGAINST", "AS", "FILTER", "AND", "OR", "FORMAT", "NOT", "NULL"
+  ],
+  "functions": [
+    "count", "sum", "avg", "min", "max", "median"
+  ],
+  "plot_types": [
+    "scatter", "line", "bar", "hist"
+  ],
+  "operators": [
+    "<=", ">=", "!=", "<", ">", "="
+  ],
+  "tokens": {
+    "STRING": "'[^']*'|\"[^\"]*\"",
+    "NUMBER": "-?\\d+\\.?\\d*",
+    "IDENT": "[a-zA-Z_][a-zA-Z0-9_]*"
+  }
+}

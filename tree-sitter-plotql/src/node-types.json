@@ -1,0 +1,303 @@
+[
+  {
+    "type": "aggregate_call",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "aggregate_func",
+          "named": true
+        },
+        {
+          "type": "identifier",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "column_ref",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "aggregate_call",
+          "named": true
+        },
+        {
+          "type": "identifier",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "condition",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "identifier",
+          "named": true
+        },
+        {
+          "type": "number",
+          "named": true
+        },
+        {
+          "type": "operator",
+          "named": true
+        },
+        {
+          "type": "string",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "filter_clause",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "and",
+          "named": true
+        },
+        {
+          "type": "condition",
+          "named": true
+        },
+        {
+          "type": "filter",
+          "named": true
+        },
+        {
+          "type": "or",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "format_clause",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "and",
+          "named": true
+        },
+        {
+          "type": "format",
+          "named": true
+        },
+        {
+          "type": "format_option",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "format_option",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "identifier",
+          "named": true
+        },
+        {
+          "type": "number",
+          "named": true
+        },
+        {
+          "type": "string",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "operator",
+    "named": true,
+    "fields": {}
+  },
+  {
+    "type": "plot_clause",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "against",
+          "named": true
+        },
+        {
+          "type": "as",
+          "named": true
+        },
+        {
+          "type": "column_ref",
+          "named": true
+        },
+        {
+          "type": "plot",
+          "named": true
+        },
+        {
+          "type": "string",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "query",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "filter_clause",
+          "named": true
+        },
+        {
+          "type": "format_clause",
+          "named": true
+        },
+        {
+          "type": "plot_clause",
+          "named": true
+        },
+        {
+          "type": "with_clause",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "string",
+    "named": true,
+    "fields": {}
+  },
+  {
+    "type": "with_clause",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "string",
+          "named": true
+        },
+        {
+          "type": "with",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "!=",
+    "named": false
+  },
+  {
+    "type": "(",
+    "named": false
+  },
+  {
+    "type": ")",
+    "named": false
+  },
+  {
+    "type": "<",
+    "named": false
+  },
+  {
+    "type": "<=",
+    "named": false
+  },
+  {
+    "type": "=",
+    "named": false
+  },
+  {
+    "type": ">",
+    "named": false
+  },
+  {
+    "type": ">=",
+    "named": false
+  },
+  {
+    "type": "against",
+    "named": true
+  },
+  {
+    "type": "aggregate_func",
+    "named": true
+  },
+  {
+    "type": "and",
+    "named": true
+  },
+  {
+    "type": "as",
+    "named": true
+  },
+  {
+    "type": "filter",
+    "named": true
+  },
+  {
+    "type": "format",
+    "named": true
+  },
+  {
+    "type": "identifier",
+    "named": true
+  },
+  {
+    "type": "number",
+    "named": true
+  },
+  {
+    "type": "or",
+    "named": true
+  },
+  {
+    "type": "plot",
+    "named": true
+  },
+  {
+    "type": "with",
+    "named": true
+  }
+]
