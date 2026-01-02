@@ -28,6 +28,7 @@ from io import BytesIO
 
 from plotql.ui.autocomplete import AutoCompleter
 from plotql.ui.config_editor import ConfigEditorScreen
+from plotql.ui.state import get_last_query, save_last_query
 from plotql.core.engines import get_engine
 from plotql.core.executor import ExecutionError, PlotData, execute
 from plotql.core.parser import ParseError, parse
@@ -199,9 +200,11 @@ class QueryEditor(TextArea):
     ]
 
     def __init__(self):
+        # Load saved query or fall back to example
+        initial_query = get_last_query() or EXAMPLE_QUERY
         # Start with default theme, we'll switch after registering ours
         super().__init__(
-            EXAMPLE_QUERY,
+            initial_query,
             language=None,
             id="editor",
         )
@@ -583,6 +586,21 @@ class PlotQLApp(App):
     def action_edit_config(self) -> None:
         """Open the config editor screen."""
         self.push_screen(ConfigEditorScreen())
+
+    def _save_state(self) -> None:
+        """Save current query to state file."""
+        try:
+            editor = self.query_one("#editor", TextArea)
+            query_text = editor.text.strip()
+            if query_text:
+                save_last_query(query_text)
+        except Exception:
+            pass  # Silently fail if we can't save
+
+    def action_quit(self) -> None:
+        """Save state and quit."""
+        self._save_state()
+        super().action_quit()
 
 
 def run_tui(query: Optional[str] = None) -> None:
