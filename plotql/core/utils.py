@@ -11,6 +11,8 @@ from typing import List, Optional, Tuple
 
 import polars as pl
 
+from plotql.themes import THEME
+
 
 # =============================================================================
 # Size Mapping (for scatter plot markers)
@@ -105,9 +107,20 @@ def map_to_sizes(
 # Default color palette for categorical colors (5 distinct colors)
 BUCKET_COLORS = ["blue", "green", "yellow", "pink", "teal"]
 
-# Gradient endpoints for continuous color scale (blue -> yellow)
-GRADIENT_START = (137, 180, 250)  # #89b4fa - soft blue
-GRADIENT_END = (249, 226, 175)    # #f9e2af - soft yellow
+
+def _hex_to_rgb(hex_color: str) -> Tuple[int, int, int]:
+    """Convert hex color to RGB tuple."""
+    hex_color = hex_color.lstrip('#')
+    return (
+        int(hex_color[0:2], 16),
+        int(hex_color[2:4], 16),
+        int(hex_color[4:6], 16),
+    )
+
+
+# Gradient endpoints from theme (converted to RGB for interpolation)
+GRADIENT_START = _hex_to_rgb(THEME.gradient[0])
+GRADIENT_END = _hex_to_rgb(THEME.gradient[1])
 
 
 def interpolate_color(t: float) -> str:
@@ -118,7 +131,7 @@ def interpolate_color(t: float) -> str:
         t: Value between 0 and 1
 
     Returns:
-        Hex color string (e.g., "#89b4fa")
+        Hex color string
     """
     t = max(0.0, min(1.0, t))
     r = int(GRADIENT_START[0] + t * (GRADIENT_END[0] - GRADIENT_START[0]))

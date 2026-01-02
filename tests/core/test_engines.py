@@ -137,7 +137,7 @@ class TestMatplotlibEngineColors:
         assert "background" in colors
         assert "text" in colors
         assert "grid" in colors
-        assert "blue" in colors
+        assert "primary" in colors
 
     def test_colors_are_hex(self, engine):
         """Test all colors are valid hex."""
@@ -162,12 +162,12 @@ class TestMatplotlibEngineColors:
     def test_get_color_none(self, engine):
         """Test get_color with None returns default."""
         result = engine.get_color(None)
-        assert result == engine.COLORS["blue"]
+        assert result == engine.COLORS["primary"]
 
     def test_get_color_unknown(self, engine):
         """Test get_color with unknown color returns default."""
         result = engine.get_color("unknown_color")
-        assert result == engine.COLORS["blue"]
+        assert result == engine.COLORS["primary"]
 
     def test_get_color_gray_grey(self, engine):
         """Test both gray and grey spellings work."""

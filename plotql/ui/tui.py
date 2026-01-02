@@ -30,33 +30,41 @@ from plotql.ui.autocomplete import AutoCompleter
 from plotql.core.engines import get_engine
 from plotql.core.executor import ExecutionError, PlotData, execute
 from plotql.core.parser import ParseError, parse
+from plotql.themes import THEME
 
-# Soft Pastel syntax highlighting theme - gentle colors, easy on the eyes
+# Build TextArea theme from centralized theme
 PLOTQL_THEME = TextAreaTheme(
-    name="plotql-pastel",
-    base_style=Style(color="#d4d4d4", bgcolor="#1e1e2e"),         # Soft grey on dark blue
-    gutter_style=Style(color="#6c7086", bgcolor="#1e1e2e"),       # Muted gutter
-    cursor_style=Style(color="#1e1e2e", bgcolor="#89dceb"),       # Soft cyan cursor
-    cursor_line_style=Style(bgcolor="#262637"),                   # Subtle line highlight
-    bracket_matching_style=Style(color="#f9e2af", bgcolor="#1e1e2e", bold=True),
-    selection_style=Style(color="#d4d4d4", bgcolor="#45475a"),    # Selection
+    name=f"plotql-{THEME.name}",
+    base_style=Style(color=THEME.text, bgcolor=THEME.background),
+    gutter_style=Style(color=THEME.text_muted, bgcolor=THEME.background),
+    cursor_style=Style(color=THEME.background, bgcolor=THEME.cursor),
+    cursor_line_style=Style(bgcolor=THEME.background_alt),
+    bracket_matching_style=Style(color=THEME.highlight, bgcolor=THEME.background, bold=True),
+    selection_style=Style(color=THEME.text, bgcolor=THEME.selection),
     syntax_styles={
-        # Keywords - soft mint green (WITH, PLOT, AGAINST, AS, FILTER, FORMAT)
-        "keyword": Style(color="#a6e3a1", bold=True),
-        # Logical operators - soft teal (AND, OR, NOT)
-        "keyword.operator": Style(color="#94e2d5"),
-        # Functions - soft yellow (count, sum, avg, etc.)
-        "function": Style(color="#f9e2af", bold=True),
-        # Strings - soft pink/rose
-        "string": Style(color="#f5c2e7"),
-        # Numbers - soft sky blue
-        "number": Style(color="#89dceb"),
-        # Identifiers/columns - soft blue
-        "variable": Style(color="#89b4fa"),
-        # Operators - soft teal (=, <, >, etc.)
-        "operator": Style(color="#94e2d5"),
-        # Comments
-        "comment": Style(color="#6c7086", italic=True),
+        # Keywords - muted purple-grey (WITH, PLOT, AGAINST, AS, FILTER, FORMAT)
+        # These are very common, so use a calm color
+        "keyword": Style(color=THEME.syntax_keyword),
+        # Logical operators - warm amber (AND, OR, NOT)
+        # Less common, so use a vibrant accent
+        "keyword.operator": Style(color=THEME.syntax_keyword_op, bold=True),
+        # Functions - soft coral-red (count, sum, avg, etc.)
+        # Rare, so use a distinctive accent
+        "function": Style(color=THEME.syntax_function, bold=True),
+        # Strings - soft rose (file paths, values)
+        # Very common
+        "string": Style(color=THEME.syntax_string),
+        # Numbers - soft teal
+        # Medium frequency
+        "number": Style(color=THEME.syntax_number),
+        # Identifiers/columns - soft lavender
+        # Very common, calm color
+        "variable": Style(color=THEME.syntax_identifier),
+        # Operators - muted purple-grey (=, <, >, etc.)
+        # Medium frequency
+        "operator": Style(color=THEME.syntax_operator),
+        # Comments - muted
+        "comment": Style(color=THEME.syntax_comment, italic=True),
     },
 )
 
@@ -87,41 +95,40 @@ logger = logging.getLogger(__name__)
 
 
 EXAMPLE_QUERY = """\
-WITH 'example/trades.csv'
-PLOT 
-    price AGAINST received_at
-PLOT
-    price AGAINST received_at
-    FILTER user_id = 'foo'
-    FORMAT marker_size = 5
+WITH 'examples/trades.csv'
+PLOT price AGAINST received_at AS 'line'
+    FORMAT color = 'pink'
+PLOT price AGAINST received_at
+    FILTER tx_sol_amount >= 3
+    FORMAT marker_size = 5 AND marker_color = 'teal'
 """
 
 
 class CompletionPopup(Static):
-    """Popup widget showing autocomplete suggestions - Soft Pastel style."""
+    """Popup widget showing autocomplete suggestions."""
 
-    DEFAULT_CSS = """
-    CompletionPopup {
+    DEFAULT_CSS = f"""
+    CompletionPopup {{
         layer: popup;
         width: auto;
         height: auto;
         max-height: 8;
-        background: #1e1e2e;
-        color: #cdd6f4;
-        border: none;
+        background: {THEME.background};
+        color: {THEME.text};
+        border: heavy {THEME.border};
         padding: 0;
         display: none;
-    }
-    CompletionPopup.visible {
+    }}
+    CompletionPopup.visible {{
         display: block;
-    }
+    }}
     """
 
-    # Soft Pastel palette - Catppuccin inspired
-    HIGHLIGHT_BG = "#89dceb"   # Soft cyan - selected item
-    HIGHLIGHT_FG = "#1e1e2e"   # Dark background for contrast
-    NORMAL_BG = "#1e1e2e"      # Dark blue base
-    NORMAL_FG = "#cdd6f4"      # Soft text
+    # Colors from theme
+    HIGHLIGHT_BG = THEME.cursor        # Selected item background
+    HIGHLIGHT_FG = THEME.background    # Selected item text
+    NORMAL_BG = THEME.background       # Normal background
+    NORMAL_FG = THEME.text             # Normal text
 
     def __init__(self):
         super().__init__("", id="completion-popup")
@@ -197,9 +204,9 @@ class QueryEditor(TextArea):
             language=None,
             id="editor",
         )
-        # Register and apply our custom pastel theme
+        # Register and apply our custom theme
         self.register_theme(PLOTQL_THEME)
-        self.theme = "plotql-pastel"
+        self.theme = PLOTQL_THEME.name
         # Register and activate PlotQL language for syntax highlighting
         if PLOTQL_LANGUAGE and PLOTQL_HIGHLIGHTS:
             self.register_language("plotql", PLOTQL_LANGUAGE, PLOTQL_HIGHLIGHTS)
@@ -361,16 +368,17 @@ class QueryEditor(TextArea):
 class PlotPanel(Static):
     """Plot display panel using textual-image for HD rendering."""
 
-    DEFAULT_CSS = """
-    PlotPanel {
+    DEFAULT_CSS = f"""
+    PlotPanel {{
         width: 100%;
         height: 100%;
-        background: #1e1e2e;
-    }
-    PlotPanel > Image {
-        width: 100%;
-        height: 100%;
-    }
+        background: {THEME.background};
+        align: center middle;
+    }}
+    PlotPanel > Image {{
+        width: auto;
+        height: 1fr;
+    }}
     """
 
     # Default cell size in pixels (common terminal default)
@@ -479,27 +487,30 @@ class PlotQLApp(App):
     """PlotQL interactive TUI application."""
 
     TITLE = "PlotQL"
-    CSS = """
-    Screen {
+    CSS = f"""
+    Screen {{
         layers: base popup;
-    }
-    #editor {
+        background: {THEME.background};
+    }}
+    #editor {{
         height: 30%;
-        border: solid green;
-    }
-    #plot {
+        border: heavy {THEME.border};
+    }}
+    #plot {{
         height: 1fr;
-        background: #1e1e2e;
-    }
-    #plot-image {
-        width: 100%;
-        height: 100%;
-    }
-    #status {
+        background: {THEME.background};
+        align: center middle;
+    }}
+    #plot-image {{
+        width: auto;
+        height: 1fr;
+    }}
+    #status {{
         height: 1;
-        background: $surface;
+        background: {THEME.background_alt};
+        color: {THEME.text};
         padding: 0 1;
-    }
+    }}
     """
 
     BINDINGS = [

@@ -79,7 +79,7 @@ class TestQueryEditor:
         app = PlotQLApp()
         async with app.run_test() as pilot:
             editor = app.query_one("#editor", QueryEditor)
-            assert editor.theme == "plotql-pastel"
+            assert editor.theme == "plotql-vaporwave"
 
 
 class TestPlotPanel:
@@ -548,7 +548,7 @@ class TestTheme:
 
     def test_theme_name(self):
         """Test theme has correct name."""
-        assert PLOTQL_THEME.name == "plotql-pastel"
+        assert PLOTQL_THEME.name == "plotql-vaporwave"
 
     def test_theme_has_syntax_styles(self):
         """Test theme has syntax highlighting styles."""
@@ -563,7 +563,7 @@ class TestTheme:
         app = PlotQLApp()
         async with app.run_test() as pilot:
             editor = app.query_one("#editor", QueryEditor)
-            assert editor.theme == "plotql-pastel"
+            assert editor.theme == "plotql-vaporwave"
 
 
 # =============================================================================

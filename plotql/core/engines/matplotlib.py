@@ -21,48 +21,36 @@ from plotql.core.ast import PlotType  # noqa: E402
 from plotql.core.executor import PlotData  # noqa: E402
 from plotql.core.engines.base import Engine  # noqa: E402
 from plotql.core.result import PlotResult  # noqa: E402
+from plotql.themes import THEME  # noqa: E402
+
+# Configure fonts from theme
+matplotlib.rcParams['font.family'] = THEME.font_family
+matplotlib.rcParams['font.monospace'] = THEME.font_stack
 
 # Type alias for render input - single PlotData or list of PlotData
 PlotDataInput = Union[PlotData, List[PlotData]]
 
 
 class MatplotlibEngine(Engine):
-    """Matplotlib-based rendering engine with Catppuccin-inspired dark theme."""
+    """Matplotlib-based rendering engine with theme support."""
 
-    # Catppuccin Mocha-inspired pastel color palette
+    # Colors derived from centralized theme
     _COLORS: Dict[str, str] = {
-        "background": "#1e1e2e",      # Dark blue-grey base
-        "paper": "#1e1e2e",           # Same as background for seamless look
-        "text": "#cdd6f4",            # Soft grey text
-        "grid": "#313244",            # Subtle grid lines
-        "blue": "#89b4fa",            # Soft blue (primary)
-        "teal": "#94e2d5",            # Soft teal
-        "green": "#a6e3a1",           # Soft mint green
-        "yellow": "#f9e2af",          # Soft yellow
-        "peach": "#fab387",           # Soft peach/orange
-        "pink": "#f5c2e7",            # Soft pink
-        "mauve": "#cba6f7",           # Soft purple
-        "red": "#f38ba8",             # Soft red
-        "sky": "#89dceb",             # Soft sky blue
-        "lavender": "#b4befe",        # Soft lavender
+        "background": THEME.background,
+        "paper": THEME.background,
+        "text": THEME.text,
+        "grid": THEME.grid,
+        "axes": THEME.axes,
+        # Chart colors for programmatic access
+        "primary": THEME.chart_colors["primary"],
+        "secondary": THEME.chart_colors["secondary"],
+        "tertiary": THEME.chart_colors["tertiary"],
+        "quaternary": THEME.chart_colors["quaternary"],
+        "accent": THEME.chart_colors["accent"],
     }
 
-    # Map user color names to our pastel palette
-    _COLOR_MAP: Dict[str, str] = {
-        "blue": _COLORS["blue"],
-        "red": _COLORS["red"],
-        "green": _COLORS["green"],
-        "yellow": _COLORS["yellow"],
-        "orange": _COLORS["peach"],
-        "pink": _COLORS["pink"],
-        "purple": _COLORS["mauve"],
-        "cyan": _COLORS["sky"],
-        "teal": _COLORS["teal"],
-        "magenta": _COLORS["pink"],
-        "white": _COLORS["text"],
-        "gray": "#6c7086",
-        "grey": "#6c7086",
-    }
+    # Map user color names to theme palette
+    _COLOR_MAP: Dict[str, str] = THEME.color_map
 
     @property
     def COLORS(self) -> Dict[str, str]:
@@ -70,10 +58,10 @@ class MatplotlibEngine(Engine):
         return self._COLORS
 
     def get_color(self, color_name: Optional[str]) -> str:
-        """Convert a color name to our pastel palette color."""
+        """Convert a color name to our theme palette color."""
         if not color_name:
-            return self._COLORS["blue"]
-        return self._COLOR_MAP.get(color_name.lower(), self._COLORS["blue"])
+            return self._COLORS["primary"]
+        return self._COLOR_MAP.get(color_name.lower(), self._COLORS["primary"])
 
     def _create_figure(
         self,
@@ -129,12 +117,12 @@ class MatplotlibEngine(Engine):
         LABEL_SIZE = 10
         TICK_SIZE = 8
 
-        # Style axes
-        ax.spines['bottom'].set_color(self._COLORS["grid"])
-        ax.spines['top'].set_color(self._COLORS["grid"])
-        ax.spines['left'].set_color(self._COLORS["grid"])
-        ax.spines['right'].set_color(self._COLORS["grid"])
-        ax.tick_params(colors=self._COLORS["text"], which='both', labelsize=TICK_SIZE)
+        # Style axes - thick blocky terminal style
+        for spine in ['bottom', 'top', 'left', 'right']:
+            ax.spines[spine].set_color(self._COLORS["axes"])
+            ax.spines[spine].set_linewidth(2.0)  # Thick blocky borders
+        ax.tick_params(colors=self._COLORS["text"], which='both', labelsize=TICK_SIZE,
+                      width=2, length=6)  # Thicker tick marks
         ax.xaxis.label.set_color(self._COLORS["text"])
         ax.yaxis.label.set_color(self._COLORS["text"])
         ax.title.set_color(self._COLORS["text"])
@@ -180,9 +168,9 @@ class MatplotlibEngine(Engine):
             new_labels = [truncate_label(label.get_text()) for label in x_labels]
             ax.set_xticklabels(new_labels, rotation=0, ha='center')
 
-        # Maximize plot area - minimal margins
-        fig.tight_layout(pad=0.5)
-        fig.subplots_adjust(left=0.08, right=0.98, top=0.92, bottom=0.12)
+        # Layout with proper margins to prevent overflow
+        fig.tight_layout(pad=1.5)
+        fig.subplots_adjust(left=0.12, right=0.92, top=0.88, bottom=0.15)
 
         return fig
 
@@ -217,16 +205,16 @@ class MatplotlibEngine(Engine):
                     colors = [self.get_color(c) for c in data.marker_colors]
 
             # Handle marker sizes (input is 1-5, map to matplotlib point sizes)
-            # Size 1 -> 20pt, Size 5 -> 100pt for clear visual distinction
+            # Size 1 -> 60pt, Size 5 -> 180pt for chunky retro aesthetic
             sizes = None
             if data.marker_sizes:
-                sizes = [20 + (s - 1) * 20 for s in data.marker_sizes]
+                sizes = [60 + (s - 1) * 30 for s in data.marker_sizes]
 
             scatter = ax.scatter(
                 data.x,
                 data.y,
                 c=colors,
-                s=sizes if sizes else 30,
+                s=sizes if sizes else 80,  # Bigger default for visibility
                 alpha=1.0,
                 edgecolors='none',
                 marker='s',  # Square marker - no antialiasing needed for straight edges
@@ -241,10 +229,10 @@ class MatplotlibEngine(Engine):
                     # Add colorbar for continuous data
                     from matplotlib.colors import LinearSegmentedColormap
 
-                    # Create colormap from gradient colors
+                    # Create colormap from theme gradient colors
                     cmap = LinearSegmentedColormap.from_list(
                         'plotql_gradient',
-                        ['#89b4fa', '#f9e2af']  # blue -> yellow
+                        THEME.gradient
                     )
                     sm = plt.cm.ScalarMappable(
                         cmap=cmap,
@@ -355,11 +343,11 @@ class MatplotlibEngine(Engine):
                 data.x,
                 data.y,
                 color=line_color,
-                linewidth=1.5,  # Clean line width for terminal rendering
+                linewidth=2.5,  # Thick retro line for terminal aesthetic
                 alpha=1.0,  # Full opacity for crisp line
-                solid_capstyle='round',
-                solid_joinstyle='round',
-                antialiased=False,  # Crisp lines
+                solid_capstyle='butt',  # Square caps for blocky look
+                solid_joinstyle='miter',  # Sharp corners for 8-bit feel
+                antialiased=False,  # Crisp blocky lines
                 zorder=zorder,
             )
 
