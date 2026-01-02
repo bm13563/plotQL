@@ -16,6 +16,7 @@ dependencies = [
     "matplotlib>=3.8.0",
     "Pillow>=10.0.0",
     "pyperclip>=1.8.0",
+    "tree-sitter>=0.21.0",
 ]
 
 [project.scripts]
