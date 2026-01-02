@@ -600,7 +600,7 @@ class PlotQLApp(App):
     def action_quit(self) -> None:
         """Save state and quit."""
         self._save_state()
-        super().action_quit()
+        self.exit()
 
 
 def run_tui(query: Optional[str] = None) -> None:

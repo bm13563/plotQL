@@ -144,18 +144,28 @@ class MatplotlibEngine(Engine):
         ax.xaxis.set_major_locator(plt.MaxNLocator(nbins=5))
         ax.yaxis.set_major_locator(plt.MaxNLocator(nbins=6))
 
-        # Format tick labels - truncate to max 10 chars with ellipsis
-        def truncate_label(text, max_len=10):
-            """Truncate label to max length with ellipsis."""
+        # Format tick labels for datetime display
+        def truncate_label(text, max_len=16):
+            """Format datetime labels to show date and time (HH:MM)."""
             text = str(text)
-            # For timestamps, try to extract just the time portion first
+            # For timestamps with date and time, format as "YYYY-MM-DD HH:MM"
             if ' ' in text and ':' in text:
                 parts = text.split(' ')
                 if len(parts) >= 2:
+                    date_part = parts[0]
                     time_part = parts[1].split('.')[0]  # Remove microseconds
                     time_parts = time_part.split(':')
                     if len(time_parts) >= 2:
-                        text = f"{time_parts[0]}:{time_parts[1]}"
+                        text = f"{date_part} {time_parts[0]}:{time_parts[1]}"
+            # Handle ISO format with T separator
+            elif 'T' in text and ':' in text:
+                parts = text.split('T')
+                if len(parts) >= 2:
+                    date_part = parts[0]
+                    time_part = parts[1].split('.')[0]  # Remove microseconds
+                    time_parts = time_part.split(':')
+                    if len(time_parts) >= 2:
+                        text = f"{date_part} {time_parts[0]}:{time_parts[1]}"
             # Truncate if still too long
             if len(text) > max_len:
                 text = text[:max_len - 1] + "..."
