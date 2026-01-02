@@ -188,10 +188,6 @@ class QueryEditor(TextArea):
         Binding("ctrl+a", "select_all", "Select All", show=False),
         Binding("ctrl+space", "autocomplete", "Autocomplete", show=False),
         Binding("escape", "dismiss_completion", "Dismiss", show=False),
-        # Alternative copy/paste that don't conflict with terminal
-        Binding("ctrl+shift+c", "copy", "Copy", show=False),
-        Binding("ctrl+shift+v", "paste", "Paste", show=False),
-        Binding("ctrl+shift+x", "cut", "Cut", show=False),
     ]
 
     def __init__(self):
@@ -208,7 +204,8 @@ class QueryEditor(TextArea):
         if PLOTQL_LANGUAGE and PLOTQL_HIGHLIGHTS:
             self.register_language("plotql", PLOTQL_LANGUAGE, PLOTQL_HIGHLIGHTS)
             self.language = "plotql"
-        self.tab_size = 2
+        self.tab_behavior = "indent"
+        self.indent_width = 2
         self.autocompleter = AutoCompleter()
         self._completion_active = False
 
@@ -359,34 +356,6 @@ class QueryEditor(TextArea):
         # End of text
         if lines:
             self.cursor_location = (len(lines) - 1, len(lines[-1]))
-
-    def action_copy(self) -> None:
-        """Copy selected text."""
-        import pyperclip
-        try:
-            text = self.selected_text
-            logger.debug(f"Copy action: selected_text = {text!r}")
-            if text:
-                pyperclip.copy(text)
-                logger.debug("Copied to clipboard")
-        except Exception as e:
-            logger.error(f"Copy failed: {e}")
-
-    def action_paste(self) -> None:
-        """Paste from clipboard."""
-        import pyperclip
-        try:
-            text = pyperclip.paste()
-            if text:
-                self.insert(text)
-        except Exception:
-            pass
-
-    def action_cut(self) -> None:
-        """Cut selected text."""
-        if self.selected_text:
-            self.action_copy()
-            self.delete_selection()
 
 
 class PlotPanel(Static):
