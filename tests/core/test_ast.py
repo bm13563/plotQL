@@ -386,12 +386,12 @@ class TestPlotQuery:
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
         )
-        assert query.source == "data.csv"
-        assert query.x_column.name == "x"
-        assert query.y_column.name == "y"
-        assert query.plot_type == PlotType.SCATTER  # Default
-        assert query.filter is None
-        assert query.format is not None
+        assert query.source.path == "data.csv"
+        assert query.series[0].x_column.name == "x"
+        assert query.series[0].y_column.name == "y"
+        assert query.series[0].plot_type == PlotType.SCATTER  # Default
+        assert query.series[0].filter is None
+        assert query.series[0].format is not None
 
     def test_plot_query_with_plot_type(self):
         """Test PlotQuery with specific plot type."""
@@ -401,7 +401,7 @@ class TestPlotQuery:
             y_column=ColumnRef(name="y"),
             plot_type=PlotType.LINE,
         )
-        assert query.plot_type == PlotType.LINE
+        assert query.series[0].plot_type == PlotType.LINE
 
     def test_plot_query_with_filter(self):
         """Test PlotQuery with filter clause."""
@@ -414,8 +414,8 @@ class TestPlotQuery:
             y_column=ColumnRef(name="y"),
             filter=where,
         )
-        assert query.filter is not None
-        assert len(query.filter.conditions) == 1
+        assert query.series[0].filter is not None
+        assert len(query.series[0].filter.conditions) == 1
 
     def test_plot_query_with_format(self):
         """Test PlotQuery with format options."""
@@ -426,7 +426,7 @@ class TestPlotQuery:
             y_column=ColumnRef(name="y"),
             format=fmt,
         )
-        assert query.format.title == "My Plot"
+        assert query.series[0].format.title == "My Plot"
 
     def test_is_aggregate_false_both_simple(self):
         """Test is_aggregate when both columns are simple."""
@@ -567,4 +567,4 @@ class TestEdgeCases:
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
         )
-        assert query.source == "/path/to/data/file.csv"
+        assert query.source.path == "/path/to/data/file.csv"

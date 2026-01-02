@@ -119,10 +119,10 @@ class TestGetContext:
         assert context == "start"
         assert partial == "W"
 
-    def test_need_quote_after_with(self):
-        """Test after WITH keyword."""
+    def test_after_with_source(self):
+        """Test after WITH keyword - can type connector or quote."""
         context, partial, _ = get_context("WITH ", 5)
-        assert context == "need_quote"
+        assert context == "after_with_source"
 
     def test_file_path_context(self):
         """Test inside file path string."""

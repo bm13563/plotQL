@@ -9,6 +9,18 @@
           "name": "with_clause"
         },
         {
+          "type": "REPEAT1",
+          "content": {
+            "type": "SYMBOL",
+            "name": "series_clause"
+          }
+        }
+      ]
+    },
+    "series_clause": {
+      "type": "SEQ",
+      "members": [
+        {
           "type": "SYMBOL",
           "name": "plot_clause"
         },
@@ -46,8 +58,47 @@
           "name": "with"
         },
         {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "string"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "connector_call"
+            }
+          ]
+        }
+      ]
+    },
+    "connector_call": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "CHOICE",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "file_connector"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "clickhouse_connector"
+            }
+          ]
+        },
+        {
+          "type": "STRING",
+          "value": "("
+        },
+        {
           "type": "SYMBOL",
-          "name": "string"
+          "name": "identifier"
+        },
+        {
+          "type": "STRING",
+          "value": ")"
         }
       ]
     },
@@ -215,6 +266,10 @@
             {
               "type": "SYMBOL",
               "name": "identifier"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "null"
             }
           ]
         }
@@ -372,6 +427,28 @@
         "content": {
           "type": "PATTERN",
           "value": "count|sum|avg|min|max|median"
+        }
+      }
+    },
+    "file_connector": {
+      "type": "TOKEN",
+      "content": {
+        "type": "PREC",
+        "value": 2,
+        "content": {
+          "type": "PATTERN",
+          "value": "file"
+        }
+      }
+    },
+    "clickhouse_connector": {
+      "type": "TOKEN",
+      "content": {
+        "type": "PREC",
+        "value": 2,
+        "content": {
+          "type": "PATTERN",
+          "value": "clickhouse"
         }
       }
     },

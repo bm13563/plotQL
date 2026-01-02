@@ -24,7 +24,7 @@ class TestFullPipeline:
 
         # Parse
         ast = parse(query_str)
-        assert ast.source == str(temp_csv)
+        assert ast.source.path == str(temp_csv)
 
         # Execute
         data_list = execute(ast)
@@ -214,7 +214,7 @@ class TestFormattedQueries:
         query_str = f"WITH '{temp_csv}' PLOT y AGAINST x FORMAT title = 'Custom Title'"
 
         ast = parse(query_str)
-        assert ast.format.title == "Custom Title"
+        assert ast.series[0].format.title == "Custom Title"
 
         data_list = execute(ast)
         data = data_list[0]
@@ -227,8 +227,8 @@ class TestFormattedQueries:
         query_str = f"WITH '{temp_csv}' PLOT y AGAINST x FORMAT xlabel = 'X Label' AND ylabel = 'Y Label'"
 
         ast = parse(query_str)
-        assert ast.format.xlabel == "X Label"
-        assert ast.format.ylabel == "Y Label"
+        assert ast.series[0].format.xlabel == "X Label"
+        assert ast.series[0].format.ylabel == "Y Label"
 
         data_list = execute(ast)
         data = data_list[0]
@@ -302,7 +302,7 @@ class TestFormattedQueries:
         query_str = f"WITH '{temp_csv}' PLOT y AGAINST x AS 'line' FORMAT line_color = red"
 
         ast = parse(query_str)
-        assert ast.format.line_color == "red"
+        assert ast.series[0].format.line_color == "red"
 
         data_list = execute(ast)
         data = data_list[0]
@@ -361,9 +361,9 @@ class TestComplexQueries:
         )
 
         ast = parse(query_str)
-        assert ast.plot_type.value == "line"
-        assert ast.filter is not None
-        assert ast.format.title == "Filtered Line"
+        assert ast.series[0].plot_type.value == "line"
+        assert ast.series[0].filter is not None
+        assert ast.series[0].format.title == "Filtered Line"
 
         data_list = execute(ast)
         data = data_list[0]

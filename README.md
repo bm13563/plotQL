@@ -4,8 +4,6 @@ A SQL-like query language for plotting data. No Python boilerplate, no rememberi
 
 ![PlotQL TUI](examples/tui_screenshot.png)
 
-That's it. One line to go from CSV to chart.
-
 ## The Language
 
 PlotQL is a query language for plotting. The core syntax is:
@@ -13,6 +11,8 @@ PlotQL is a query language for plotting. The core syntax is:
 ```
 WITH '<data_source>' PLOT <y_column> AGAINST <x_column> [AS <plot_type>]
 ```
+
+The repository also ships with a Textual UI which uses the core plotQL API.
 
 ### Basic Examples
 

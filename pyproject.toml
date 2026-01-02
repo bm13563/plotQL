@@ -27,3 +27,6 @@ dev = [
     "pytest>=7.0.0",
     "ruff>=0.1.0",
 ]
+clickhouse = [
+    "clickhouse-connect>=0.7.0",
+]

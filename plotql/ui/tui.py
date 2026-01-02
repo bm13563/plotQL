@@ -27,6 +27,7 @@ from PIL import Image as PILImage
 from io import BytesIO
 
 from plotql.ui.autocomplete import AutoCompleter
+from plotql.ui.config_editor import ConfigEditorScreen
 from plotql.core.engines import get_engine
 from plotql.core.executor import ExecutionError, PlotData, execute
 from plotql.core.parser import ParseError, parse
@@ -516,6 +517,7 @@ class PlotQLApp(App):
     BINDINGS = [
         Binding("ctrl+q", "quit", "Quit"),
         Binding("f5", "execute", "Execute", show=True),
+        Binding("f2", "edit_config", "Connectors", show=True),
     ]
 
     def __init__(self, initial_query: Optional[str] = None):
@@ -577,6 +579,10 @@ class PlotQLApp(App):
         except Exception as e:
             status.set_error(str(e))
             plot.show_error(str(e))
+
+    def action_edit_config(self) -> None:
+        """Open the config editor screen."""
+        self.push_screen(ConfigEditorScreen())
 
 
 def run_tui(query: Optional[str] = None) -> None:

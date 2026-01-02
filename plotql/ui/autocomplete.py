@@ -35,6 +35,11 @@ FUNCTIONS = [
     "count", "sum", "avg", "min", "max", "median",
 ]
 
+# Connector functions
+CONNECTORS = [
+    "file", "clickhouse",
+]
+
 # Plot types
 PLOT_TYPES = [
     "'scatter'", "'line'", "'bar'", "'hist'",
@@ -82,6 +87,13 @@ def get_context(text: str, cursor_pos: int) -> Tuple[str, str, Optional[str]]:
     if agg_match:
         partial_col = agg_match.group(2) or ""
         return ("agg_column", partial_col, detected_plot_type)
+
+    # Check if we're inside a connector function (e.g., file(|) or clickhouse(|) )
+    connector_match = re.search(r"\b(file|clickhouse)\(\s*([a-zA-Z_]*)?$", before, re.IGNORECASE)
+    if connector_match:
+        connector_type = connector_match.group(1).lower()
+        partial_alias = connector_match.group(2) or ""
+        return ("connector_alias", partial_alias, detected_plot_type, connector_type)
 
     # Check if we're inside a string after WITH (file path context)
     with_match = re.search(r"WITH\s+['\"]([^'\"]*?)$", before, re.IGNORECASE)
@@ -190,9 +202,17 @@ def get_context(text: str, cursor_pos: int) -> Tuple[str, str, Optional[str]]:
     if re.search(r"WITH\s+['\"][^'\"]+['\"]\s*$", before, re.IGNORECASE):
         return ("after_with", partial, detected_plot_type)
 
-    # After WITH, need to open quote for file path
+    # After WITH + connector call (e.g., "WITH file(trades) "), suggest PLOT
+    if re.search(r"WITH\s+(file|clickhouse)\([a-zA-Z_][a-zA-Z0-9_]*\)\s*$", before, re.IGNORECASE):
+        return ("after_with", partial, detected_plot_type)
+
+    # After WITH, can type quote for file path OR connector function
     if re.search(r"WITH\s*$", before_upper):
-        return ("need_quote", partial, detected_plot_type)
+        return ("after_with_source", partial, detected_plot_type)
+
+    # Typing a connector name after WITH (e.g., "WITH fi")
+    if re.search(r"WITH\s+[a-zA-Z]+$", before, re.IGNORECASE) and not re.search(r"WITH\s+['\"]", before):
+        return ("after_with_source", partial, detected_plot_type)
 
     # Empty or start - also handle newlines after complete statements
     if not before_stripped or before_stripped.upper() == partial.upper():
@@ -363,7 +383,15 @@ class AutoCompleter:
         Returns:
             List of Completion objects
         """
-        context, partial, detected_plot_type = get_context(text, cursor_pos)
+        context_result = get_context(text, cursor_pos)
+
+        # get_context returns 3-tuple normally, 4-tuple for connector_alias
+        if len(context_result) == 4:
+            context, partial, detected_plot_type, connector_type = context_result
+        else:
+            context, partial, detected_plot_type = context_result
+            connector_type = None
+
         partial_upper = partial.upper()
         partial_lower = partial.lower()
 
@@ -381,8 +409,16 @@ class AutoCompleter:
                 completions.append(Completion("WITH", "WITH", "keyword"))
 
         elif context == "need_quote":
-            # After WITH, need to type a quote
+            # After WITH, need to type a quote (backward compat)
             completions.append(Completion("'", "' (open quote)", "syntax"))
+
+        elif context == "after_with_source":
+            # After WITH, suggest connectors or quote for literal path
+            for conn in CONNECTORS:
+                if conn.startswith(partial_lower) or not partial:
+                    completions.append(Completion(f"{conn}(", conn, "connector"))
+            if not partial or "'".startswith(partial):
+                completions.append(Completion("'", "' (file path)", "syntax"))
 
         elif context == "file_path":
             # File path completions (no quotes needed, they're already there)
@@ -408,6 +444,19 @@ class AutoCompleter:
             for col in self._cached_columns:
                 if col.lower().startswith(partial_lower) or not partial:
                     completions.append(Completion(col + ")", col, "column"))
+
+        elif context == "connector_alias":
+            # Inside connector function - suggest aliases from config
+            try:
+                from plotql.core.config import list_aliases
+                if connector_type:
+                    aliases = list_aliases(connector_type)
+                    for alias in aliases:
+                        if alias.lower().startswith(partial_lower) or not partial:
+                            completions.append(Completion(alias + ")", alias, "alias"))
+            except Exception:
+                # Config not available or error - no completions
+                pass
 
         elif context == "after_plot_col":
             # After PLOT column, only AGAINST is valid

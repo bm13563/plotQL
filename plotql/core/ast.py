@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Union
 
 
 class PlotType(Enum):
@@ -22,6 +22,36 @@ class AggregateFunc(Enum):
     MIN = "min"
     MAX = "max"
     MEDIAN = "median"
+
+
+# Data Source Types
+# -----------------
+
+@dataclass
+class DataSource:
+    """Base class for data sources."""
+    pass
+
+
+@dataclass
+class LiteralSource(DataSource):
+    """
+    A literal file path data source.
+
+    Used for: WITH 'path/to/file.csv'
+    """
+    path: str
+
+
+@dataclass
+class ConnectorSource(DataSource):
+    """
+    A connector function call data source.
+
+    Used for: WITH file(alias) or WITH clickhouse(alias)
+    """
+    connector: str  # "file", "clickhouse"
+    alias: str
 
 
 @dataclass
@@ -128,35 +158,13 @@ class PlotQuery:
         PLOT price AGAINST time
             FILTER user_id = 'foo'
             FORMAT marker_size = 5
+
+    Example with connectors:
+        WITH file(trades) PLOT price AGAINST time
+        WITH clickhouse(production) PLOT price AGAINST time
     """
-    source: str  # File path
+    source: DataSource  # Data source (LiteralSource or ConnectorSource)
     series: List[PlotSeries] = field(default_factory=list)
-
-    # Backward compatibility properties - delegate to first series
-    @property
-    def x_column(self) -> ColumnRef:
-        """X column of the first series (backward compatibility)."""
-        return self.series[0].x_column if self.series else ColumnRef(name="")
-
-    @property
-    def y_column(self) -> ColumnRef:
-        """Y column of the first series (backward compatibility)."""
-        return self.series[0].y_column if self.series else ColumnRef(name="")
-
-    @property
-    def plot_type(self) -> PlotType:
-        """Plot type of the first series (backward compatibility)."""
-        return self.series[0].plot_type if self.series else PlotType.SCATTER
-
-    @property
-    def filter(self) -> Optional[WhereClause]:
-        """Filter of the first series (backward compatibility)."""
-        return self.series[0].filter if self.series else None
-
-    @property
-    def format(self) -> FormatOptions:
-        """Format options of the first series (backward compatibility)."""
-        return self.series[0].format if self.series else FormatOptions()
 
     @property
     def is_aggregate(self) -> bool:
@@ -164,7 +172,14 @@ class PlotQuery:
         return any(s.is_aggregate for s in self.series)
 
     def __repr__(self) -> str:
-        parts = [f"WITH '{self.source}'"]
+        if isinstance(self.source, LiteralSource):
+            source_str = f"WITH '{self.source.path}'"
+        elif isinstance(self.source, ConnectorSource):
+            source_str = f"WITH {self.source.connector}({self.source.alias})"
+        else:
+            source_str = f"WITH {self.source}"
+
+        parts = [source_str]
         for s in self.series:
             parts.append(f"PLOT {s.y_column} AGAINST {s.x_column} AS '{s.plot_type.value}'")
             if s.filter:

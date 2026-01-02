@@ -12,13 +12,25 @@ module.exports = grammar({
       repeat1($.series_clause)
     ),
 
-    with_clause: $ => seq($.with, $.string),
-
-    // A series is a PLOT clause followed by optional FILTER and FORMAT
     series_clause: $ => seq(
       $.plot_clause,
       optional($.filter_clause),
       optional($.format_clause)
+    ),
+
+    with_clause: $ => seq(
+      $.with,
+      choice(
+        $.string,
+        $.connector_call
+      )
+    ),
+
+    connector_call: $ => seq(
+      choice($.file_connector, $.clickhouse_connector),
+      '(',
+      $.identifier,
+      ')'
     ),
 
     plot_clause: $ => seq(
@@ -47,7 +59,7 @@ module.exports = grammar({
       repeat(seq($.and, $.format_option))
     ),
 
-    format_option: $ => seq($.identifier, '=', choice($.string, $.number, $.identifier)),
+    format_option: $ => seq($.identifier, '=', choice($.string, $.number, $.identifier, $.null)),
 
     column_ref: $ => choice($.identifier, $.aggregate_call),
 
@@ -67,6 +79,10 @@ module.exports = grammar({
 
     // Aggregate functions
     aggregate_func: _ => token(prec(2, /count|sum|avg|min|max|median/i)),
+
+    // Connector functions
+    file_connector: _ => token(prec(2, /file/i)),
+    clickhouse_connector: _ => token(prec(2, /clickhouse/i)),
 
     // Literals
     string: _ => choice(/'[^']*'/, /"[^"]*"/),

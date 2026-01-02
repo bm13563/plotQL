@@ -65,6 +65,29 @@
     }
   },
   {
+    "type": "connector_call",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "clickhouse_connector",
+          "named": true
+        },
+        {
+          "type": "file_connector",
+          "named": true
+        },
+        {
+          "type": "identifier",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "filter_clause",
     "named": true,
     "fields": {},
@@ -127,6 +150,10 @@
           "named": true
         },
         {
+          "type": "null",
+          "named": true
+        },
+        {
           "type": "number",
           "named": true
         },
@@ -182,6 +209,25 @@
       "required": true,
       "types": [
         {
+          "type": "series_clause",
+          "named": true
+        },
+        {
+          "type": "with_clause",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "series_clause",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
           "type": "filter_clause",
           "named": true
         },
@@ -191,10 +237,6 @@
         },
         {
           "type": "plot_clause",
-          "named": true
-        },
-        {
-          "type": "with_clause",
           "named": true
         }
       ]
@@ -213,6 +255,10 @@
       "multiple": true,
       "required": true,
       "types": [
+        {
+          "type": "connector_call",
+          "named": true
+        },
         {
           "type": "string",
           "named": true
@@ -273,6 +319,14 @@
     "named": true
   },
   {
+    "type": "clickhouse_connector",
+    "named": true
+  },
+  {
+    "type": "file_connector",
+    "named": true
+  },
+  {
     "type": "filter",
     "named": true
   },
@@ -282,6 +336,10 @@
   },
   {
     "type": "identifier",
+    "named": true
+  },
+  {
+    "type": "null",
     "named": true
   },
   {

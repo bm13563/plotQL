@@ -13,6 +13,7 @@ def generate():
 
     keywords = grammar["keywords"]
     functions = grammar["functions"]
+    connectors = grammar.get("connectors", [])
 
     # Build keyword rules (case-insensitive)
     keyword_rules = []
@@ -20,6 +21,15 @@ def generate():
         keyword_rules.append(f'    {kw.lower()}: _ => token(prec(2, /{kw}/i)),')
 
     func_names = "|".join(functions)
+
+    # Build connector rules (case-insensitive)
+    connector_rules = []
+    connector_choices = []
+    for conn in connectors:
+        connector_rules.append(f'    {conn}_connector: _ => token(prec(2, /{conn}/i)),')
+        connector_choices.append(f'$.{conn}_connector')
+
+    connector_choice_str = ", ".join(connector_choices) if connector_choices else "''"
 
     grammar_js = f'''// Auto-generated from grammar.json - DO NOT EDIT MANUALLY
 // Regenerate with: python generate_grammar.py
@@ -32,12 +42,29 @@ module.exports = grammar({{
   rules: {{
     query: $ => seq(
       $.with_clause,
+      repeat1($.series_clause)
+    ),
+
+    series_clause: $ => seq(
       $.plot_clause,
       optional($.filter_clause),
       optional($.format_clause)
     ),
 
-    with_clause: $ => seq($.with, $.string),
+    with_clause: $ => seq(
+      $.with,
+      choice(
+        $.string,
+        $.connector_call
+      )
+    ),
+
+    connector_call: $ => seq(
+      choice({connector_choice_str}),
+      '(',
+      $.identifier,
+      ')'
+    ),
 
     plot_clause: $ => seq(
       $.plot,
@@ -65,7 +92,7 @@ module.exports = grammar({{
       repeat(seq($.and, $.format_option))
     ),
 
-    format_option: $ => seq($.identifier, '=', choice($.string, $.number, $.identifier)),
+    format_option: $ => seq($.identifier, '=', choice($.string, $.number, $.identifier, $.null)),
 
     column_ref: $ => choice($.identifier, $.aggregate_call),
 
@@ -76,6 +103,9 @@ module.exports = grammar({{
 
     // Aggregate functions
     aggregate_func: _ => token(prec(2, /{func_names}/i)),
+
+    // Connector functions
+{chr(10).join(connector_rules)}
 
     // Literals
     string: _ => choice(/'[^']*'/, /"[^"]*"/),

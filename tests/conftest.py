@@ -15,6 +15,7 @@ from plotql.core.ast import (
     ComparisonOp,
     Condition,
     FormatOptions,
+    LiteralSource,
     LogicalOp,
     PlotQuery,
     PlotSeries,
@@ -41,7 +42,7 @@ def make_plot_query(
         filter=filter,
         format=format or FormatOptions(),
     )
-    return PlotQuery(source=source, series=[series])
+    return PlotQuery(source=LiteralSource(path=source), series=[series])
 
 
 # =============================================================================

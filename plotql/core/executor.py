@@ -4,7 +4,6 @@ Query executor - loads data with Polars and prepares it for plotting.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
 from typing import List, Optional
 
 import polars as pl
@@ -13,12 +12,17 @@ from plotql.core.ast import (
     AggregateFunc,
     ColumnRef,
     ComparisonOp,
+    ConnectorSource,
+    DataSource,
+    LiteralSource,
     LogicalOp,
     PlotQuery,
     PlotSeries,
     PlotType,
     WhereClause,
 )
+from plotql.core.config import get_connector_config
+from plotql.core.connectors import get_connector, LiteralConnector, ConnectorError
 from plotql.core.utils import map_to_sizes, map_to_colors, TimestampInfo, detect_timestamp_columns
 
 
@@ -75,40 +79,45 @@ class PlotData:
     x_timestamp: Optional[TimestampInfo] = None
     y_timestamp: Optional[TimestampInfo] = None
 
-    # Backward compatibility - delegate to series
-    @property
-    def query(self) -> PlotSeries:
-        """Backward compatibility alias for series."""
-        return self.series
 
-
-def load_file(path: str) -> pl.DataFrame:
+def load_data(
+    source: DataSource,
+    filters: Optional[List[WhereClause]] = None,
+) -> tuple[pl.DataFrame, bool]:
     """
-    Load a data file into a Polars DataFrame.
+    Load data from any data source type.
 
-    Supports: CSV, Parquet, JSON, NDJSON
+    Args:
+        source: A DataSource (LiteralSource or ConnectorSource)
+        filters: Optional list of WhereClause filters to push down.
+                 Only used if the connector supports filter pushdown.
+                 The connector is responsible for combining them appropriately.
+
+    Returns:
+        Tuple of (DataFrame, filter_applied) where filter_applied is True
+        if filters were pushed down to the connector.
+
+    Raises:
+        ExecutionError: If data loading fails.
     """
-    p = Path(path)
-
-    if not p.exists():
-        raise ExecutionError(f"File not found: {path}")
-
-    suffix = p.suffix.lower()
-
     try:
-        if suffix == ".csv":
-            return pl.read_csv(path)
-        elif suffix == ".parquet":
-            return pl.read_parquet(path)
-        elif suffix == ".json":
-            return pl.read_json(path)
-        elif suffix == ".ndjson":
-            return pl.read_ndjson(path)
+        if isinstance(source, LiteralSource):
+            # Literal file path - use LiteralConnector (no pushdown)
+            connector = LiteralConnector()
+            return connector.load({"path": source.path}), False
+        elif isinstance(source, ConnectorSource):
+            # Connector function call - look up config and dispatch
+            config = get_connector_config(source.connector, source.alias)
+            connector = get_connector(source.connector)
+            # Pass filters if connector supports pushdown
+            if connector.supports_filter_pushdown and filters:
+                return connector.load(config, filters=filters), True
+            else:
+                return connector.load(config), False
         else:
-            # Try CSV as default
-            return pl.read_csv(path)
-    except Exception as e:
-        raise ExecutionError(f"Failed to load {path}: {e}")
+            raise ExecutionError(f"Unknown data source type: {type(source)}")
+    except ConnectorError as e:
+        raise ExecutionError(str(e))
 
 
 def apply_where(df: pl.DataFrame, where: WhereClause) -> pl.DataFrame:
@@ -146,26 +155,6 @@ def apply_where(df: pl.DataFrame, where: WhereClause) -> pl.DataFrame:
             expr = expr | next_cond
 
     return df.filter(expr)
-
-
-def validate_format_options(query: PlotQuery) -> None:
-    """
-    Validate that format options are compatible with the plot type.
-
-    Raises ExecutionError if invalid options are used.
-    """
-    fmt = query.format
-    plot_type = query.plot_type
-
-    # marker_color and marker_size only valid for scatter plots
-    if fmt.marker_color and plot_type != PlotType.SCATTER:
-        raise ExecutionError(
-            f"marker_color is only valid for scatter plots, not {plot_type.value}"
-        )
-    if fmt.marker_size and plot_type != PlotType.SCATTER:
-        raise ExecutionError(
-            f"marker_size is only valid for scatter plots, not {plot_type.value}"
-        )
 
 
 def apply_aggregation(
@@ -411,17 +400,24 @@ def execute(query: PlotQuery) -> List[PlotData]:
     Execute a PlotQL query and return data ready for plotting.
 
     This function:
-    1. Loads the source file with Polars
+    1. Loads the data source (file, database, etc.) via connectors
     2. For each series: applies filters, aggregations, extracts data
     3. Returns list of PlotData (one per series) ready for visualization
 
     Later series in the list should be rendered on top of earlier ones.
+
+    For connectors that support filter pushdown (like ClickHouse), filters
+    are passed to the connector which handles combining and pushing them down.
     """
-    # Load data once
-    df = load_file(query.source)
+    # Collect all series filters for potential pushdown
+    filters = [s.filter for s in query.series if s.filter is not None]
+
+    # Load data via connector abstraction, with filters for potential pushdown
+    df, _ = load_data(query.source, filters=filters)
     row_count = len(df)
 
     # Execute each series
+    # Series still apply their own filters (pushdown is optimization only)
     results = []
     for series in query.series:
         plot_data = _execute_series(series, df, row_count)

@@ -23,7 +23,10 @@ from plotql.core.ast import (
     ColumnRef,
     Condition,
     ComparisonOp,
+    ConnectorSource,
+    DataSource,
     FormatOptions,
+    LiteralSource,
     LogicalOp,
     PlotQuery,
     PlotSeries,
@@ -59,6 +62,7 @@ class Lexer:
 
     KEYWORDS = {kw.upper() for kw in _GRAMMAR["keywords"]}
     AGGREGATE_FUNCS = {fn.upper() for fn in _GRAMMAR["functions"]}
+    CONNECTORS = {c.upper() for c in _GRAMMAR.get("connectors", [])}
 
     # Build operator pattern from grammar (escape special chars, longest first)
     _ops_sorted = sorted(_GRAMMAR["operators"], key=len, reverse=True)
@@ -96,6 +100,8 @@ class Lexer:
                                 token_type = upper
                             elif upper in self.AGGREGATE_FUNCS:
                                 token_type = "AGGFUNC"
+                            elif upper in self.CONNECTORS:
+                                token_type = "CONNECTOR"
                         yield Token(token_type, value, self.pos)
                     self.pos = match.end()
                     break
@@ -176,12 +182,27 @@ class Parser:
             series=series_list,
         )
 
-    def parse_with_clause(self) -> str:
-        """Parse: WITH 'filename'"""
+    def parse_with_clause(self) -> DataSource:
+        """Parse: WITH 'filename' | WITH connector(alias)"""
         self.expect("WITH")
-        token = self.expect("STRING")
-        # Strip quotes
-        return token.value[1:-1]
+
+        if self.current and self.current.type == "STRING":
+            # Literal file path: WITH 'path/to/file.csv'
+            token = self.expect("STRING")
+            return LiteralSource(path=token.value[1:-1])
+        elif self.current and self.current.type == "CONNECTOR":
+            # Connector function call: WITH file(alias) or WITH clickhouse(alias)
+            connector_token = self.advance()
+            connector_type = connector_token.value.lower()
+            self.expect("LPAREN")
+            alias_token = self.expect("IDENT")
+            self.expect("RPAREN")
+            return ConnectorSource(connector=connector_type, alias=alias_token.value)
+        else:
+            raise ParseError(
+                "Expected file path string or connector function (e.g., file(alias))",
+                self.current.position if self.current else 0
+            )
 
     def parse_column_ref(self) -> ColumnRef:
         """

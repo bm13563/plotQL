@@ -28,59 +28,9 @@ from plotql.core.executor import (
     apply_aggregation,
     apply_where,
     execute,
-    load_file,
     validate_series_format_options,
 )
 from tests.conftest import make_plot_query
-
-
-# =============================================================================
-# load_file Tests
-# =============================================================================
-
-class TestLoadFile:
-    """Tests for load_file function."""
-
-    def test_load_csv(self, temp_csv: Path):
-        """Test loading a CSV file."""
-        df = load_file(str(temp_csv))
-        assert isinstance(df, pl.DataFrame)
-        assert len(df) == 5
-        assert "x" in df.columns
-        assert "y" in df.columns
-
-    def test_load_parquet(self, temp_parquet: Path):
-        """Test loading a Parquet file."""
-        df = load_file(str(temp_parquet))
-        assert isinstance(df, pl.DataFrame)
-        assert len(df) == 3
-
-    def test_load_json(self, temp_json: Path):
-        """Test loading a JSON file."""
-        df = load_file(str(temp_json))
-        assert isinstance(df, pl.DataFrame)
-        assert len(df) == 3
-
-    def test_load_ndjson(self, temp_ndjson: Path):
-        """Test loading an NDJSON file."""
-        df = load_file(str(temp_ndjson))
-        assert isinstance(df, pl.DataFrame)
-        assert len(df) == 3
-
-    def test_load_file_not_found(self):
-        """Test error when file doesn't exist."""
-        with pytest.raises(ExecutionError) as exc_info:
-            load_file("/nonexistent/path/file.csv")
-        assert "File not found" in str(exc_info.value)
-
-    def test_load_unknown_extension_as_csv(self, temp_dir: Path):
-        """Test loading unknown extension as CSV."""
-        path = temp_dir / "data.txt"
-        df = pl.DataFrame({"x": [1, 2], "y": [3, 4]})
-        df.write_csv(path)
-
-        result = load_file(str(path))
-        assert len(result) == 2
 
 
 # =============================================================================

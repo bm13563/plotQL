@@ -170,7 +170,12 @@ class MatplotlibEngine(Engine):
 
         # Layout with proper margins to prevent overflow
         fig.tight_layout(pad=1.5)
-        fig.subplots_adjust(left=0.12, right=0.92, top=0.88, bottom=0.15)
+        # Use smaller right margin when colorbar is present to avoid excess padding
+        has_colorbar = any(
+            d.color_info and d.color_info.is_continuous for d in data_list
+        )
+        right_margin = 0.85 if has_colorbar else 0.92
+        fig.subplots_adjust(left=0.12, right=right_margin, top=0.88, bottom=0.15)
 
         return fig
 
