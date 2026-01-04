@@ -323,6 +323,14 @@ def _execute_series(
     # Detect timestamp columns before extracting values
     x_timestamp, y_timestamp = detect_timestamp_columns(df, x_col_name, y_col_name)
 
+    # Sort data based on plot type:
+    # - LINE/SCATTER: sort ascending by x for proper visualization
+    # - BAR/HIST: sort ascending by y (smallest bar first, largest last)
+    if series.plot_type in (PlotType.LINE, PlotType.SCATTER):
+        df = df.sort(x_col_name)
+    elif series.plot_type in (PlotType.BAR, PlotType.HIST):
+        df = df.sort(y_col_name)
+
     # Extract plot data
     x = df[x_col_name].to_list()
     y = df[y_col_name].to_list()

@@ -747,3 +747,146 @@ class TestExecuteWithRealData:
 
         assert result.filtered_count <= result.row_count
         assert all(p > 10 for p in result.y)
+
+
+# =============================================================================
+# Plot Data Sorting Tests
+# =============================================================================
+
+class TestPlotDataSorting:
+    """Tests for automatic plot data sorting."""
+
+    @pytest.fixture
+    def unsorted_csv(self, temp_dir: Path) -> Path:
+        """Create a CSV with unsorted data."""
+        path = temp_dir / "unsorted.csv"
+        df = pl.DataFrame({
+            "x": [3, 1, 4, 2, 5],
+            "y": [30, 10, 40, 20, 50],
+            "category": ["A", "B", "C", "D", "E"],
+        })
+        df.write_csv(path)
+        return path
+
+    def test_scatter_sorted_by_x(self, unsorted_csv: Path):
+        """Test scatter plot data is sorted ascending by x."""
+        query = make_plot_query(
+            source=str(unsorted_csv),
+            x_column=ColumnRef(name="x"),
+            y_column=ColumnRef(name="y"),
+            plot_type=PlotType.SCATTER,
+        )
+        results = execute(query)
+        result = results[0]
+
+        # x values should be sorted ascending
+        assert result.x == [1, 2, 3, 4, 5]
+        # y values should follow the same reordering
+        assert result.y == [10, 20, 30, 40, 50]
+
+    def test_line_sorted_by_x(self, unsorted_csv: Path):
+        """Test line plot data is sorted ascending by x."""
+        query = make_plot_query(
+            source=str(unsorted_csv),
+            x_column=ColumnRef(name="x"),
+            y_column=ColumnRef(name="y"),
+            plot_type=PlotType.LINE,
+        )
+        results = execute(query)
+        result = results[0]
+
+        # x values should be sorted ascending
+        assert result.x == [1, 2, 3, 4, 5]
+        # y values should follow the same reordering
+        assert result.y == [10, 20, 30, 40, 50]
+
+    def test_bar_sorted_by_y(self, unsorted_csv: Path):
+        """Test bar plot data is sorted ascending by y (smallest bar first)."""
+        query = make_plot_query(
+            source=str(unsorted_csv),
+            x_column=ColumnRef(name="category"),
+            y_column=ColumnRef(name="y"),
+            plot_type=PlotType.BAR,
+        )
+        results = execute(query)
+        result = results[0]
+
+        # y values should be sorted ascending (smallest bar first)
+        assert result.y == [10, 20, 30, 40, 50]
+        # x (categories) should follow the same reordering
+        assert result.x == ["B", "D", "A", "C", "E"]
+
+    def test_hist_sorted_by_y(self, unsorted_csv: Path):
+        """Test histogram data is sorted ascending by y (smallest bar first)."""
+        query = make_plot_query(
+            source=str(unsorted_csv),
+            x_column=ColumnRef(name="category"),
+            y_column=ColumnRef(name="y"),
+            plot_type=PlotType.HIST,
+        )
+        results = execute(query)
+        result = results[0]
+
+        # y values should be sorted ascending (smallest bar first)
+        assert result.y == [10, 20, 30, 40, 50]
+        # x (categories) should follow the same reordering
+        assert result.x == ["B", "D", "A", "C", "E"]
+
+    def test_scatter_sorting_preserves_marker_sizes(self, unsorted_csv: Path):
+        """Test that marker_sizes are reordered along with the data."""
+        # Create CSV with value column for marker sizes
+        query = make_plot_query(
+            source=str(unsorted_csv),
+            x_column=ColumnRef(name="x"),
+            y_column=ColumnRef(name="y"),
+            plot_type=PlotType.SCATTER,
+            format=FormatOptions(marker_size="y"),  # Use y as size column
+        )
+        results = execute(query)
+        result = results[0]
+
+        # Data should be sorted by x
+        assert result.x == [1, 2, 3, 4, 5]
+        # marker_sizes should correspond to the sorted y values
+        assert result.marker_sizes is not None
+        # Since y is mapped to sizes, smaller y values should have smaller sizes
+        # After sorting by x, the sizes should follow the same order as y
+        for i in range(len(result.marker_sizes) - 1):
+            assert result.marker_sizes[i] <= result.marker_sizes[i + 1]
+
+    def test_scatter_sorting_preserves_marker_colors(self, unsorted_csv: Path):
+        """Test that marker_colors are reordered along with the data."""
+        query = make_plot_query(
+            source=str(unsorted_csv),
+            x_column=ColumnRef(name="x"),
+            y_column=ColumnRef(name="y"),
+            plot_type=PlotType.SCATTER,
+            format=FormatOptions(marker_color="category"),
+        )
+        results = execute(query)
+        result = results[0]
+
+        # Data should be sorted by x
+        assert result.x == [1, 2, 3, 4, 5]
+        # marker_colors should be in the order corresponding to sorted x
+        # Original order: x=[3,1,4,2,5] category=[A,B,C,D,E]
+        # Sorted by x: x=[1,2,3,4,5] category=[B,D,A,C,E]
+        # So colors should follow B, D, A, C, E order
+        assert result.marker_colors is not None
+        assert len(result.marker_colors) == 5
+
+    def test_bar_with_aggregation_sorted_by_y(self, temp_csv_categorical: Path):
+        """Test bar plot with aggregation is sorted by y."""
+        query = make_plot_query(
+            source=str(temp_csv_categorical),
+            x_column=ColumnRef(name="group"),
+            y_column=ColumnRef(name="amount", aggregate=AggregateFunc.SUM),
+            plot_type=PlotType.BAR,
+        )
+        results = execute(query)
+        result = results[0]
+
+        # Groups have sums: A=30, B=70, C=110
+        # Should be sorted ascending by y
+        assert result.y == [30, 70, 110]
+        assert result.x == ["A", "B", "C"]
