@@ -690,6 +690,60 @@ class TestCompletionInsertion:
             )
 
     @pytest.mark.asyncio
+    async def test_insert_completion_plot_type_after_manual_quote(self):
+        """Test that completing plot type after typing ' manually doesn't double quote.
+
+        Regression test for bug where typing AS ' then completing 'line'
+        would result in ''line' instead of 'line'.
+        """
+        app = PlotQLApp()
+        async with app.run_test() as pilot:
+            editor = app.query_one("#editor", QueryEditor)
+
+            # User typed AS ' manually (just the quote)
+            editor.text = "WITH source('data.csv') PLOT y AGAINST x AS '"
+            editor.cursor_location = (0, len(editor.text))
+
+            # Complete with 'line' (which includes quotes)
+            editor._insert_completion("'line'")
+
+            # Should have exactly one quote before 'line', not two
+            assert "AS 'line'" in editor.text, (
+                f"Double quote bug! Got: {editor.text}"
+            )
+            # Make sure we don't have double quotes
+            assert "AS ''line'" not in editor.text, (
+                f"Double quote at start! Got: {editor.text}"
+            )
+
+    @pytest.mark.asyncio
+    async def test_insert_completion_plot_type_after_partial_typing(self):
+        """Test completing plot type after typing quote + partial text.
+
+        Regression test for bug where typing AS 'l then completing 'line'
+        would result in ''line' instead of 'line'.
+        """
+        app = PlotQLApp()
+        async with app.run_test() as pilot:
+            editor = app.query_one("#editor", QueryEditor)
+
+            # User typed AS 'l (quote + partial)
+            editor.text = "WITH source('data.csv') PLOT y AGAINST x AS 'l"
+            editor.cursor_location = (0, len(editor.text))
+
+            # Complete with 'line' (which includes quotes)
+            editor._insert_completion("'line'")
+
+            # Should replace 'l with 'line'
+            assert "AS 'line'" in editor.text, (
+                f"Double quote bug! Got: {editor.text}"
+            )
+            # Make sure we don't have double quotes
+            assert "AS ''line'" not in editor.text, (
+                f"Double quote at start! Got: {editor.text}"
+            )
+
+    @pytest.mark.asyncio
     async def test_insert_completion_multipart_path_in_source(self):
         """Test completing multi-part paths like docs/examples/file.csv."""
         app = PlotQLApp()

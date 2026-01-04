@@ -2,13 +2,11 @@
 
 ; Keywords - bright mint/teal green
 (with) @keyword
-(source) @keyword
 (plot) @keyword
 (against) @keyword
 (as) @keyword
 (filter) @keyword
 (format) @keyword
-(null) @keyword
 
 ; Logical operators - soft coral/peach
 (and) @keyword.operator

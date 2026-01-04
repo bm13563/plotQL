@@ -314,7 +314,7 @@
         "value": 2,
         "content": {
           "type": "PATTERN",
-          "value": "WITH"
+          "value": "[Ww][Ii][Tt][Hh]"
         }
       }
     },
@@ -325,7 +325,7 @@
         "value": 2,
         "content": {
           "type": "PATTERN",
-          "value": "SOURCE"
+          "value": "[Ss][Oo][Uu][Rr][Cc][Ee]"
         }
       }
     },
@@ -336,7 +336,7 @@
         "value": 2,
         "content": {
           "type": "PATTERN",
-          "value": "PLOT"
+          "value": "[Pp][Ll][Oo][Tt]"
         }
       }
     },
@@ -347,7 +347,7 @@
         "value": 2,
         "content": {
           "type": "PATTERN",
-          "value": "AGAINST"
+          "value": "[Aa][Gg][Aa][Ii][Nn][Ss][Tt]"
         }
       }
     },
@@ -358,7 +358,7 @@
         "value": 2,
         "content": {
           "type": "PATTERN",
-          "value": "AS"
+          "value": "[Aa][Ss]"
         }
       }
     },
@@ -369,7 +369,7 @@
         "value": 2,
         "content": {
           "type": "PATTERN",
-          "value": "FILTER"
+          "value": "[Ff][Ii][Ll][Tt][Ee][Rr]"
         }
       }
     },
@@ -380,7 +380,7 @@
         "value": 2,
         "content": {
           "type": "PATTERN",
-          "value": "AND"
+          "value": "[Aa][Nn][Dd]"
         }
       }
     },
@@ -391,7 +391,7 @@
         "value": 2,
         "content": {
           "type": "PATTERN",
-          "value": "OR"
+          "value": "[Oo][Rr]"
         }
       }
     },
@@ -402,7 +402,7 @@
         "value": 2,
         "content": {
           "type": "PATTERN",
-          "value": "FORMAT"
+          "value": "[Ff][Oo][Rr][Mm][Aa][Tt]"
         }
       }
     },
@@ -413,7 +413,7 @@
         "value": 2,
         "content": {
           "type": "PATTERN",
-          "value": "NOT"
+          "value": "[Nn][Oo][Tt]"
         }
       }
     },
@@ -424,7 +424,7 @@
         "value": 2,
         "content": {
           "type": "PATTERN",
-          "value": "NULL"
+          "value": "[Nn][Uu][Ll][Ll]"
         }
       }
     },
@@ -435,7 +435,7 @@
         "value": 2,
         "content": {
           "type": "PATTERN",
-          "value": "count|sum|avg|min|max|median"
+          "value": "[Cc][Oo][Uu][Nn][Tt]|[Ss][Uu][Mm]|[Aa][Vv][Gg]|[Mm][Ii][Nn]|[Mm][Aa][Xx]|[Mm][Ee][Dd][Ii][Aa][Nn]"
         }
       }
     },

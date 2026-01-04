@@ -346,6 +346,22 @@ class QueryEditor(TextArea):
             self._move_cursor_to_offset(new_offset)
             return
 
+        # Check if completion is a quoted value (like 'line') and user already typed opening quote
+        # This handles: AS 'l -> completing with 'line' should replace 'l with 'line'
+        if text and text[0] in ("'", '"') and text[-1] == text[0]:
+            # Completion is a quoted string - check if there's a matching opening quote
+            quote_char = text[0]
+            # Find if there's an unmatched opening quote before cursor
+            quote_match = re.search(rf"{quote_char}([^{quote_char}]*)$", before)
+            if quote_match:
+                # User typed quote + partial, replace from the quote
+                quote_start = quote_match.start()
+                new_text = self.text[:quote_start] + text + self.text[offset:]
+                self.text = new_text
+                new_offset = quote_start + len(text)
+                self._move_cursor_to_offset(new_offset)
+                return
+
         # Find word boundary (include path characters for file paths, but NOT quotes)
         match = re.search(r"[a-zA-Z0-9_./-]*$", before)
         if match:
