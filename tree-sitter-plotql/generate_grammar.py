@@ -29,7 +29,29 @@ def generate():
         connector_rules.append(f'    {conn}_connector: _ => token(prec(2, /{conn}/i)),')
         connector_choices.append(f'$.{conn}_connector')
 
-    connector_choice_str = ", ".join(connector_choices) if connector_choices else "''"
+    connector_choice_str = ", ".join(connector_choices) if connector_choices else None
+
+    # Build with_clause - only include connector_call if connectors are defined
+    if connector_choice_str:
+        with_clause = """with_clause: $ => seq(
+      $.with,
+      choice(
+        $.string,
+        $.connector_call
+      )
+    ),
+
+    connector_call: $ => seq(
+      choice(""" + connector_choice_str + """),
+      '(',
+      $.identifier,
+      ')'
+    ),"""
+    else:
+        with_clause = """with_clause: $ => seq(
+      $.with,
+      $.string
+    ),"""
 
     grammar_js = f'''// Auto-generated from grammar.json - DO NOT EDIT MANUALLY
 // Regenerate with: python generate_grammar.py
@@ -51,20 +73,7 @@ module.exports = grammar({{
       optional($.format_clause)
     ),
 
-    with_clause: $ => seq(
-      $.with,
-      choice(
-        $.string,
-        $.connector_call
-      )
-    ),
-
-    connector_call: $ => seq(
-      choice({connector_choice_str}),
-      '(',
-      $.identifier,
-      ')'
-    ),
+    {with_clause}
 
     plot_clause: $ => seq(
       $.plot,

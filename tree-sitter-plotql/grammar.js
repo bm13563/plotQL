@@ -20,17 +20,7 @@ module.exports = grammar({
 
     with_clause: $ => seq(
       $.with,
-      choice(
-        $.string,
-        $.connector_call
-      )
-    ),
-
-    connector_call: $ => seq(
-      choice(''),
-      '(',
-      $.identifier,
-      ')'
+      $.string
     ),
 
     plot_clause: $ => seq(

@@ -58,43 +58,8 @@
           "name": "with"
         },
         {
-          "type": "CHOICE",
-          "members": [
-            {
-              "type": "SYMBOL",
-              "name": "string"
-            },
-            {
-              "type": "SYMBOL",
-              "name": "connector_call"
-            }
-          ]
-        }
-      ]
-    },
-    "connector_call": {
-      "type": "SEQ",
-      "members": [
-        {
-          "type": "CHOICE",
-          "members": [
-            {
-              "type": "STRING",
-              "value": ""
-            }
-          ]
-        },
-        {
-          "type": "STRING",
-          "value": "("
-        },
-        {
           "type": "SYMBOL",
-          "name": "identifier"
-        },
-        {
-          "type": "STRING",
-          "value": ")"
+          "name": "string"
         }
       ]
     },
