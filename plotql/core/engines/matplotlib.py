@@ -19,7 +19,7 @@ from matplotlib.figure import Figure  # noqa: E402
 
 from plotql.core.ast import PlotType  # noqa: E402
 from plotql.core.executor import PlotData  # noqa: E402
-from plotql.core.engines.base import Engine  # noqa: E402
+from plotql.core.engines.base import Engine, format_datetime_tick  # noqa: E402
 from plotql.core.result import PlotResult  # noqa: E402
 from plotql.themes import THEME  # noqa: E402
 
@@ -143,24 +143,28 @@ class MatplotlibEngine(Engine):
         # Limit x-axis ticks to max 5 for cleaner look
         ax.yaxis.set_major_locator(plt.MaxNLocator(nbins=6))
 
-        # Check if x-axis contains datetime values and format accordingly
-        from datetime import datetime
+        # Check if x-axis contains datetime values using x_timestamp info from PlotData
         first_data = data_list[0] if data_list else None
-        has_datetime_x = (
-            first_data is not None
-            and first_data.x
-            and isinstance(first_data.x[0], datetime)
-        )
+        has_datetime_x = first_data is not None and first_data.x_timestamp is not None
 
         if has_datetime_x:
-            # Use DateFormatter for datetime x-axis with limited ticks
+            # Custom formatter: full date on first tick and day boundaries, time only otherwise
             import matplotlib.dates as mdates
-            ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d %H:%M'))
+            from matplotlib.ticker import FuncFormatter
+
+            def smart_date_formatter(x, pos):
+                dt = mdates.num2date(x)
+                ticks = ax.get_xticks()
+                all_dates = [mdates.num2date(t) for t in ticks]
+                return format_datetime_tick(dt, pos, all_dates)
+
+            ax.xaxis.set_major_formatter(FuncFormatter(smart_date_formatter))
             ax.xaxis.set_major_locator(mdates.AutoDateLocator(maxticks=5))
-            # Rotate labels for readability
-            plt.setp(ax.get_xticklabels(), rotation=0, ha='right')
         else:
             ax.xaxis.set_major_locator(plt.MaxNLocator(nbins=5))
+
+        # Rotate labels for readability
+        plt.setp(ax.get_xticklabels(), rotation=10, ha='right')
 
         # Layout with proper margins to prevent overflow
         fig.tight_layout(pad=1.5)
@@ -187,6 +191,16 @@ class MatplotlibEngine(Engine):
         series = data.series
         fmt = series.format
 
+        # Convert x values to datetime if x_timestamp info is present
+        x_values = data.x
+        if data.x_timestamp is not None:
+            from datetime import datetime
+            from dateutil import parser as date_parser
+            x_values = [
+                date_parser.parse(str(v)) if not isinstance(v, datetime) else v
+                for v in data.x
+            ]
+
         # Determine colors for this series
         line_color = self.get_color(fmt.line_color)
         marker_color = self.get_color(fmt.marker_color) if fmt.marker_color else default_marker_color
@@ -210,7 +224,7 @@ class MatplotlibEngine(Engine):
                 sizes = [20 + (s - 1) * 20 for s in data.marker_sizes]
 
             scatter = ax.scatter(
-                data.x,
+                x_values,
                 data.y,
                 c=colors,
                 s=sizes if sizes else 40,  # Default size=2 (20 + 1*20 = 40)
@@ -339,7 +353,7 @@ class MatplotlibEngine(Engine):
 
         elif series.plot_type == PlotType.LINE:
             ax.plot(
-                data.x,
+                x_values,
                 data.y,
                 color=line_color,
                 linewidth=2.5,  # Thick retro line for terminal aesthetic
@@ -352,7 +366,7 @@ class MatplotlibEngine(Engine):
 
         elif series.plot_type == PlotType.BAR:
             ax.bar(
-                data.x,
+                x_values,
                 data.y,
                 color=line_color,
                 alpha=0.8,

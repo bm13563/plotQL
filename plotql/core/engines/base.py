@@ -2,11 +2,43 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Dict, Optional
+from datetime import datetime
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 if TYPE_CHECKING:
     from plotql.core.executor import PlotData
     from plotql.core.result import PlotResult
+
+
+def format_datetime_tick(dt: datetime, pos: int, all_dates: List[datetime]) -> str:
+    """
+    Format a datetime tick label with smart date display.
+
+    Rules:
+    - First tick (pos=0): always show 'yyyy-mm-dd hh:mm'
+    - Day boundary (different date from previous tick): show 'yyyy-mm-dd hh:mm'
+    - Otherwise: show 'hh:mm'
+
+    Args:
+        dt: The datetime value for this tick
+        pos: Position index of this tick (0-based)
+        all_dates: List of all datetime values at tick positions
+
+    Returns:
+        Formatted string for the tick label
+    """
+    # First tick always shows full date+time
+    if pos == 0:
+        return dt.strftime('%Y-%m-%d %H:%M')
+
+    # Check if this is a new day compared to previous tick
+    if pos > 0 and pos < len(all_dates):
+        prev_dt = all_dates[pos - 1]
+        if dt.date() != prev_dt.date():
+            return dt.strftime('%Y-%m-%d %H:%M')
+
+    # Otherwise just show time
+    return dt.strftime('%H:%M')
 
 
 class Engine(ABC):
