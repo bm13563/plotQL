@@ -1,5 +1,5 @@
-// Auto-generated from grammar.json - DO NOT EDIT MANUALLY
-// Regenerate with: python generate_grammar.py
+// PlotQL tree-sitter grammar
+// Note: Do not regenerate from generate_grammar.py - this is the source of truth
 
 module.exports = grammar({
   name: 'plotql',
@@ -63,24 +63,21 @@ module.exports = grammar({
 
     aggregate_call: $ => seq($.aggregate_func, '(', $.identifier, ')'),
 
-    // Keywords (case-insensitive)
-    with: _ => token(prec(2, /WITH/i)),
-    source: _ => token(prec(2, /SOURCE/i)),
-    plot: _ => token(prec(2, /PLOT/i)),
-    against: _ => token(prec(2, /AGAINST/i)),
-    as: _ => token(prec(2, /AS/i)),
-    filter: _ => token(prec(2, /FILTER/i)),
-    and: _ => token(prec(2, /AND/i)),
-    or: _ => token(prec(2, /OR/i)),
-    format: _ => token(prec(2, /FORMAT/i)),
-    not: _ => token(prec(2, /NOT/i)),
-    null: _ => token(prec(2, /NULL/i)),
+    // Keywords (case-insensitive using character classes - tree-sitter doesn't support /i flag)
+    with: _ => token(prec(2, /[Ww][Ii][Tt][Hh]/)),
+    source: _ => token(prec(2, /[Ss][Oo][Uu][Rr][Cc][Ee]/)),
+    plot: _ => token(prec(2, /[Pp][Ll][Oo][Tt]/)),
+    against: _ => token(prec(2, /[Aa][Gg][Aa][Ii][Nn][Ss][Tt]/)),
+    as: _ => token(prec(2, /[Aa][Ss]/)),
+    filter: _ => token(prec(2, /[Ff][Ii][Ll][Tt][Ee][Rr]/)),
+    and: _ => token(prec(2, /[Aa][Nn][Dd]/)),
+    or: _ => token(prec(2, /[Oo][Rr]/)),
+    format: _ => token(prec(2, /[Ff][Oo][Rr][Mm][Aa][Tt]/)),
+    not: _ => token(prec(2, /[Nn][Oo][Tt]/)),
+    null: _ => token(prec(2, /[Nn][Uu][Ll][Ll]/)),
 
-    // Aggregate functions
-    aggregate_func: _ => token(prec(2, /count|sum|avg|min|max|median/i)),
-
-    // Connector functions
-
+    // Aggregate functions (case-insensitive)
+    aggregate_func: _ => token(prec(2, /[Cc][Oo][Uu][Nn][Tt]|[Ss][Uu][Mm]|[Aa][Vv][Gg]|[Mm][Ii][Nn]|[Mm][Aa][Xx]|[Mm][Ee][Dd][Ii][Aa][Nn]/)),
 
     // Literals
     string: _ => choice(/'[^']*'/, /"[^"]*"/),
