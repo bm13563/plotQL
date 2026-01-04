@@ -79,12 +79,8 @@
           "type": "CHOICE",
           "members": [
             {
-              "type": "SYMBOL",
-              "name": "file_connector"
-            },
-            {
-              "type": "SYMBOL",
-              "name": "clickhouse_connector"
+              "type": "STRING",
+              "value": ""
             }
           ]
         },
@@ -320,6 +316,17 @@
         }
       }
     },
+    "source": {
+      "type": "TOKEN",
+      "content": {
+        "type": "PREC",
+        "value": 2,
+        "content": {
+          "type": "PATTERN",
+          "value": "SOURCE"
+        }
+      }
+    },
     "plot": {
       "type": "TOKEN",
       "content": {
@@ -427,28 +434,6 @@
         "content": {
           "type": "PATTERN",
           "value": "count|sum|avg|min|max|median"
-        }
-      }
-    },
-    "file_connector": {
-      "type": "TOKEN",
-      "content": {
-        "type": "PREC",
-        "value": 2,
-        "content": {
-          "type": "PATTERN",
-          "value": "file"
-        }
-      }
-    },
-    "clickhouse_connector": {
-      "type": "TOKEN",
-      "content": {
-        "type": "PREC",
-        "value": 2,
-        "content": {
-          "type": "PATTERN",
-          "value": "clickhouse"
         }
       }
     },

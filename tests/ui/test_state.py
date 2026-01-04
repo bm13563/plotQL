@@ -54,16 +54,16 @@ class TestGetLastQuery:
         assert get_last_query() is None
 
     def test_returns_saved_query(self, temp_state_file):
-        query = "WITH 'test.csv' PLOT x AGAINST y"
+        query = "WITH source('test.csv') PLOT x AGAINST y"
         temp_state_file.write_text(json.dumps({"last_query": query}))
         assert get_last_query() == query
 
 
 class TestSaveLastQuery:
     def test_saves_query(self, temp_state_file):
-        save_last_query("WITH 'data.csv' PLOT a AGAINST b")
+        save_last_query("WITH source('data.csv') PLOT a AGAINST b")
         state = json.loads(temp_state_file.read_text())
-        assert state["last_query"] == "WITH 'data.csv' PLOT a AGAINST b"
+        assert state["last_query"] == "WITH source('data.csv') PLOT a AGAINST b"
 
     def test_preserves_other_state(self, temp_state_file):
         temp_state_file.write_text('{"other": "data"}')

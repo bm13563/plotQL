@@ -4,7 +4,8 @@ Query executor - loads data with Polars and prepares it for plotting.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional
+from datetime import datetime
+from typing import Any, List, Optional, Union
 
 import polars as pl
 
@@ -19,9 +20,10 @@ from plotql.core.ast import (
     PlotQuery,
     PlotSeries,
     PlotType,
+    SourceRef,
     WhereClause,
 )
-from plotql.core.config import get_connector_config
+from plotql.core.config import get_source_config
 from plotql.core.connectors import get_connector, LiteralConnector, ConnectorError
 from plotql.core.utils import map_to_sizes, map_to_colors, TimestampInfo, detect_timestamp_columns
 
@@ -65,8 +67,8 @@ class ColorInfo:
 @dataclass
 class PlotData:
     """Result of executing a single series - ready for plotting."""
-    x: List[float]
-    y: List[float]
+    x: List[Any]  # Can be float, datetime, or string depending on data
+    y: List[Any]
     series: PlotSeries  # The series this data came from
     row_count: int
     filtered_count: int
@@ -81,14 +83,14 @@ class PlotData:
 
 
 def load_data(
-    source: DataSource,
+    source: Union[SourceRef, DataSource],
     filters: Optional[List[WhereClause]] = None,
 ) -> tuple[pl.DataFrame, bool]:
     """
     Load data from any data source type.
 
     Args:
-        source: A DataSource (LiteralSource or ConnectorSource)
+        source: A SourceRef or legacy DataSource
         filters: Optional list of WhereClause filters to push down.
                  Only used if the connector supports filter pushdown.
                  The connector is responsible for combining them appropriately.
@@ -101,23 +103,66 @@ def load_data(
         ExecutionError: If data loading fails.
     """
     try:
-        if isinstance(source, LiteralSource):
-            # Literal file path - use LiteralConnector (no pushdown)
+        if isinstance(source, SourceRef):
+            return _load_from_source_ref(source, filters)
+        elif isinstance(source, LiteralSource):
+            # Legacy: Literal file path - use LiteralConnector (no pushdown)
             connector = LiteralConnector()
             return connector.load({"path": source.path}), False
         elif isinstance(source, ConnectorSource):
-            # Connector function call - look up config and dispatch
-            config = get_connector_config(source.connector, source.alias)
-            connector = get_connector(source.connector)
+            # Legacy: Connector function call - look up config and dispatch
+            source_config = get_source_config(source.alias)
+            connector = get_connector(source_config.type)
             # Pass filters if connector supports pushdown
             if connector.supports_filter_pushdown and filters:
-                return connector.load(config, filters=filters), True
+                return connector.load(source_config.config, filters=filters), True
             else:
-                return connector.load(config), False
+                return connector.load(source_config.config), False
         else:
             raise ExecutionError(f"Unknown data source type: {type(source)}")
     except ConnectorError as e:
         raise ExecutionError(str(e))
+
+
+def _load_from_source_ref(
+    source: SourceRef,
+    filters: Optional[List[WhereClause]] = None,
+) -> tuple[pl.DataFrame, bool]:
+    """
+    Load data from a SourceRef.
+
+    Handles:
+    - source('path.csv') -> literal file path
+    - source(trades) -> file alias lookup
+    - source(pump_fun, trades) -> database alias + table
+    - source(local_data, subdir, file.csv) -> folder alias + path segments
+    """
+    if source.is_file_literal:
+        # Literal file path
+        connector = LiteralConnector()
+        return connector.load({"path": source.args[0]}), False
+
+    # Config-based source
+    alias = source.alias
+    source_config = get_source_config(alias)
+    connector = get_connector(source_config.type)
+
+    # Build config dict, adding extra args based on connector type
+    config = dict(source_config.config)
+    extra_args = source.args[1:] if len(source.args) > 1 else []
+
+    if source_config.type == "folder":
+        # Folder connector: all extra args are path segments
+        config["segments"] = extra_args
+    elif extra_args:
+        # Other connectors (clickhouse): first extra arg is table
+        config["table"] = extra_args[0]
+
+    # Pass filters if connector supports pushdown
+    if connector.supports_filter_pushdown and filters:
+        return connector.load(config, filters=filters), True
+    else:
+        return connector.load(config), False
 
 
 def apply_where(df: pl.DataFrame, where: WhereClause) -> pl.DataFrame:

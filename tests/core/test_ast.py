@@ -386,7 +386,7 @@ class TestPlotQuery:
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
         )
-        assert query.source.path == "data.csv"
+        assert query.source.args[0] == "data.csv"
         assert query.series[0].x_column.name == "x"
         assert query.series[0].y_column.name == "y"
         assert query.series[0].plot_type == PlotType.SCATTER  # Default
@@ -464,7 +464,7 @@ class TestPlotQuery:
             plot_type=PlotType.SCATTER,
         )
         repr_str = repr(query)
-        assert "WITH 'data.csv'" in repr_str
+        assert "WITH source('data.csv')" in repr_str
         assert "PLOT y AGAINST x AS 'scatter'" in repr_str
 
     def test_repr_with_aggregation(self):
@@ -567,4 +567,4 @@ class TestEdgeCases:
             x_column=ColumnRef(name="x"),
             y_column=ColumnRef(name="y"),
         )
-        assert query.source.path == "/path/to/data/file.csv"
+        assert query.source.args[0] == "/path/to/data/file.csv"

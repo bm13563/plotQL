@@ -1,7 +1,7 @@
 """
 ClickHouse connector for PlotQL.
 
-Handles ClickHouse database queries: WITH clickhouse(trades)
+Handles ClickHouse database queries: WITH source(pump_fun, trades)
 """
 from __future__ import annotations
 
@@ -19,27 +19,35 @@ class ClickHouseConnector(Connector):
     """
     Connector for ClickHouse databases.
 
-    Used when clickhouse() function is specified in WITH clause
-    (e.g., WITH clickhouse(trades)).
+    Used when a source with type="clickhouse" is specified:
+        WITH source(pump_fun, trades)
+
+    Where pump_fun is configured in sources.toml as:
+        [pump_fun]
+        type = "clickhouse"
+        host = "localhost"
+        database = "pump_fun"
+        limit = 10000
+
+    And trades is the table name passed at query time.
 
     Requires clickhouse-connect package: pip install plotql[clickhouse]
 
     Supports filter pushdown: PlotQL FILTER clauses are converted to SQL
-    WHERE clauses and appended to the base query for efficient filtering
-    at the database level.
+    WHERE clauses for efficient filtering at the database level.
     """
 
     supports_filter_pushdown: bool = True
 
     def validate_config(self, config: dict) -> None:
         """Validate ClickHouse configuration."""
-        required = ["host", "query"]
+        required = ["host", "table"]
         missing = [key for key in required if key not in config]
 
         if missing:
             raise ConfigError(
                 f"ClickHouse connector requires: {', '.join(missing)}. "
-                "Add these to your connector config."
+                "Ensure host is in config and table is provided in query."
             )
 
     def load(
@@ -53,12 +61,13 @@ class ClickHouseConnector(Connector):
         Args:
             config: Must contain:
                 - host: ClickHouse server hostname
-                - query: SQL query to execute
+                - table: Table name to query (passed from source args)
                 Optional:
                 - port: Server port (default: 8123)
                 - username: Authentication username
                 - password: Authentication password
                 - database: Database name
+                - limit: Row limit (default: 10000)
             filters: Optional list of WhereClause filters to push down.
                      Multiple filters are combined with OR (since each
                      series needs its subset of data).
@@ -86,11 +95,11 @@ class ClickHouseConnector(Connector):
         username = config.get("username")
         password = config.get("password")
         database = config.get("database")
-        query = config["query"]
+        table = config["table"]
+        limit = config.get("limit", 10000)
 
-        # Apply filter pushdown if we have filters
-        if filters:
-            query = self._apply_filters(query, filters)
+        # Build the query
+        query = self._build_query(table, filters, limit)
 
         try:
             client = clickhouse_connect.get_client(
@@ -115,71 +124,40 @@ class ClickHouseConnector(Connector):
         except Exception as e:
             raise ConnectionError(f"ClickHouse query failed: {e}")
 
-    def _apply_filters(
+    def _build_query(
         self,
-        query: str,
-        filters: List["WhereClause"],
+        table: str,
+        filters: Optional[List["WhereClause"]],
+        limit: int,
     ) -> str:
         """
-        Append WHERE clause conditions to the query.
+        Build SQL query from table name, filters, and limit.
+
+        Generates: SELECT * FROM {table} [WHERE ...] LIMIT {limit}
+        """
+        query = f"SELECT * FROM {table}"
+
+        if filters:
+            where_clause = self._build_where_clause(filters)
+            query += f" WHERE {where_clause}"
+
+        query += f" LIMIT {limit}"
+        return query
+
+    def _build_where_clause(self, filters: List["WhereClause"]) -> str:
+        """
+        Build WHERE clause from filters.
 
         Multiple filters are combined with OR (each filter represents
         a different series that needs its data subset).
-
-        If the query already has WHERE, appends with AND (...).
-        Otherwise adds WHERE clause.
         """
-        from plotql.core.ast import ComparisonOp, LogicalOp
+        filter_sqls = [self._where_to_sql(where) for where in filters]
 
-        # Build SQL for each filter, then OR them together
-        filter_sqls = []
-        for where in filters:
-            filter_sqls.append(self._where_to_sql(where))
-
-        # Combine filters with OR
         if len(filter_sqls) == 1:
-            combined_sql = filter_sqls[0]
+            return filter_sqls[0]
         else:
             # Wrap each in parens and OR together
-            combined_sql = " OR ".join(f"({sql})" for sql in filter_sqls)
-
-        # Check if query already has WHERE (case-insensitive)
-        query_upper = query.upper()
-        if " WHERE " in query_upper:
-            # Find the position and append with AND (...)
-            where_pos = query_upper.find(" WHERE ") + 7
-
-            # Find end of WHERE clause (before ORDER BY, LIMIT, GROUP BY)
-            end_keywords = [" ORDER BY", " LIMIT", " GROUP BY", " HAVING"]
-            end_pos = len(query)
-            for kw in end_keywords:
-                pos = query_upper.find(kw, where_pos)
-                if pos != -1 and pos < end_pos:
-                    end_pos = pos
-
-            # Insert the additional conditions wrapped in parens
-            new_query = (
-                query[:end_pos]
-                + " AND (" + combined_sql + ")"
-                + query[end_pos:]
-            )
-            return new_query
-        else:
-            # No WHERE clause - need to add one
-            # Find where to insert (before ORDER BY, LIMIT, GROUP BY)
-            end_keywords = [" ORDER BY", " LIMIT", " GROUP BY", " HAVING"]
-            insert_pos = len(query)
-            for kw in end_keywords:
-                pos = query_upper.find(kw)
-                if pos != -1 and pos < insert_pos:
-                    insert_pos = pos
-
-            new_query = (
-                query[:insert_pos]
-                + " WHERE " + combined_sql
-                + query[insert_pos:]
-            )
-            return new_query
+            return " OR ".join(f"({sql})" for sql in filter_sqls)
 
     def _where_to_sql(self, where: "WhereClause") -> str:
         """Convert a WhereClause to SQL condition string."""

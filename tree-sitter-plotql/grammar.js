@@ -27,7 +27,7 @@ module.exports = grammar({
     ),
 
     connector_call: $ => seq(
-      choice($.file_connector, $.clickhouse_connector),
+      choice(''),
       '(',
       $.identifier,
       ')'
@@ -67,6 +67,7 @@ module.exports = grammar({
 
     // Keywords (case-insensitive)
     with: _ => token(prec(2, /WITH/i)),
+    source: _ => token(prec(2, /SOURCE/i)),
     plot: _ => token(prec(2, /PLOT/i)),
     against: _ => token(prec(2, /AGAINST/i)),
     as: _ => token(prec(2, /AS/i)),
@@ -81,8 +82,7 @@ module.exports = grammar({
     aggregate_func: _ => token(prec(2, /count|sum|avg|min|max|median/i)),
 
     // Connector functions
-    file_connector: _ => token(prec(2, /file/i)),
-    clickhouse_connector: _ => token(prec(2, /clickhouse/i)),
+
 
     // Literals
     string: _ => choice(/'[^']*'/, /"[^"]*"/),

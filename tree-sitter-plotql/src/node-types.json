@@ -69,17 +69,9 @@
     "named": true,
     "fields": {},
     "children": {
-      "multiple": true,
+      "multiple": false,
       "required": true,
       "types": [
-        {
-          "type": "clickhouse_connector",
-          "named": true
-        },
-        {
-          "type": "file_connector",
-          "named": true
-        },
         {
           "type": "identifier",
           "named": true
@@ -271,6 +263,10 @@
     }
   },
   {
+    "type": "",
+    "named": false
+  },
+  {
     "type": "!=",
     "named": false
   },
@@ -316,14 +312,6 @@
   },
   {
     "type": "as",
-    "named": true
-  },
-  {
-    "type": "clickhouse_connector",
-    "named": true
-  },
-  {
-    "type": "file_connector",
     "named": true
   },
   {

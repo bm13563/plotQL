@@ -28,29 +28,63 @@ class AggregateFunc(Enum):
 # -----------------
 
 @dataclass
+class SourceRef:
+    """
+    A source reference with one or more arguments.
+
+    Examples:
+        WITH source('path.csv')                    -> args = ['path.csv'], is_literal = True
+        WITH source(trades)                        -> args = ['trades'], is_literal = False
+        WITH source(pump_fun, trades)              -> args = ['pump_fun', 'trades']
+        WITH source(local, 'subdir', 'file.csv')   -> args = ['local', 'subdir', 'file.csv']
+
+    The first arg is either:
+    - A literal file path (string in quotes)
+    - A config alias that maps to a file, folder, or database connection
+
+    For database connectors (clickhouse), second arg is the table name.
+    For folder connectors, remaining args are path segments (subdirs + filename).
+    """
+    args: List[str]
+    is_literal: bool = False  # True if first arg was a quoted string literal
+
+    @property
+    def is_file_literal(self) -> bool:
+        """True if this is a literal file path."""
+        return self.is_literal and len(self.args) == 1
+
+    @property
+    def alias(self) -> Optional[str]:
+        """The config alias (first arg if not a literal)."""
+        if self.is_literal:
+            return None
+        return self.args[0] if self.args else None
+
+    @property
+    def table(self) -> Optional[str]:
+        """The table name (second arg for database sources)."""
+        if len(self.args) >= 2:
+            return self.args[1]
+        return None
+
+
+# Keep old types for backward compatibility during migration
+@dataclass
 class DataSource:
-    """Base class for data sources."""
+    """Base class for data sources. Deprecated - use SourceRef."""
     pass
 
 
 @dataclass
 class LiteralSource(DataSource):
-    """
-    A literal file path data source.
-
-    Used for: WITH 'path/to/file.csv'
-    """
+    """Deprecated - use SourceRef with is_literal=True."""
     path: str
 
 
 @dataclass
 class ConnectorSource(DataSource):
-    """
-    A connector function call data source.
-
-    Used for: WITH file(alias) or WITH clickhouse(alias)
-    """
-    connector: str  # "file", "clickhouse"
+    """Deprecated - use SourceRef."""
+    connector: str
     alias: str
 
 
@@ -147,23 +181,23 @@ class PlotQuery:
     Complete PlotQL query AST.
 
     Example query with single series:
-        WITH 'trades.csv'
+        WITH source('trades.csv')
         PLOT price AGAINST time AS 'line'
         FILTER symbol = 'AAPL' AND volume > 1000
         FORMAT marker_color = 'red' AND line_color = 'blue'
 
     Example query with multiple series (later series plot on top):
-        WITH 'trades.csv'
+        WITH source('trades.csv')
         PLOT price AGAINST time
         PLOT price AGAINST time
             FILTER user_id = 'foo'
             FORMAT marker_size = 5
 
-    Example with connectors:
-        WITH file(trades) PLOT price AGAINST time
-        WITH clickhouse(production) PLOT price AGAINST time
+    Example with sources:
+        WITH source(trades) PLOT price AGAINST time           # file alias
+        WITH source(pump_fun, trades) PLOT price AGAINST time # db alias + table
     """
-    source: DataSource  # Data source (LiteralSource or ConnectorSource)
+    source: Union[SourceRef, DataSource]  # SourceRef preferred, DataSource for backward compat
     series: List[PlotSeries] = field(default_factory=list)
 
     @property
@@ -172,7 +206,13 @@ class PlotQuery:
         return any(s.is_aggregate for s in self.series)
 
     def __repr__(self) -> str:
-        if isinstance(self.source, LiteralSource):
+        if isinstance(self.source, SourceRef):
+            args_str = ", ".join(
+                f"'{a}'" if self.source.is_literal else a
+                for a in self.source.args
+            )
+            source_str = f"WITH source({args_str})"
+        elif isinstance(self.source, LiteralSource):
             source_str = f"WITH '{self.source.path}'"
         elif isinstance(self.source, ConnectorSource):
             source_str = f"WITH {self.source.connector}({self.source.alias})"

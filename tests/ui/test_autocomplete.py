@@ -119,128 +119,128 @@ class TestGetContext:
         assert context == "start"
         assert partial == "W"
 
-    def test_after_with_source(self):
-        """Test after WITH keyword - can type connector or quote."""
+    def test_after_with_keyword(self):
+        """Test after WITH keyword - expect source(."""
         context, partial, _ = get_context("WITH ", 5)
-        assert context == "after_with_source"
+        assert context == "after_with_keyword"
 
     def test_file_path_context(self):
-        """Test inside file path string."""
-        context, partial, _ = get_context("WITH 'data", 10)
+        """Test inside file path string in source()."""
+        context, partial, _ = get_context("WITH source('data", 17)
         assert context == "file_path"
         assert partial == "data"
 
     def test_file_path_with_directory(self):
-        """Test file path with directory."""
-        context, partial, _ = get_context("WITH 'path/to/", 14)
+        """Test file path with directory in source()."""
+        context, partial, _ = get_context("WITH source('path/to/", 21)
         assert context == "file_path"
         assert partial == "path/to/"
 
     def test_after_with_context(self):
-        """Test after complete WITH clause."""
-        context, partial, _ = get_context("WITH 'data.csv' ", 16)
+        """Test after complete WITH source() clause."""
+        context, partial, _ = get_context("WITH source('data.csv') ", 24)
         assert context == "after_with"
 
     def test_column_context_after_plot(self):
         """Test after PLOT keyword."""
-        context, partial, _ = get_context("WITH 'data.csv' PLOT ", 21)
+        context, partial, _ = get_context("WITH source('data.csv') PLOT ", 29)
         assert context == "column"
 
     def test_agg_column_context(self):
         """Test inside aggregate function."""
-        context, partial, _ = get_context("WITH 'data.csv' PLOT count(", 27)
+        context, partial, _ = get_context("WITH source('data.csv') PLOT count(", 35)
         assert context == "agg_column"
 
     def test_agg_column_partial(self):
         """Test inside aggregate function with partial column."""
-        context, partial, _ = get_context("WITH 'data.csv' PLOT count(pr", 29)
+        context, partial, _ = get_context("WITH source('data.csv') PLOT count(pr", 37)
         assert context == "agg_column"
         assert partial == "pr"
 
     def test_after_plot_col_context(self):
         """Test after PLOT column."""
-        context, partial, _ = get_context("WITH 'data.csv' PLOT price ", 27)
+        context, partial, _ = get_context("WITH source('data.csv') PLOT price ", 35)
         assert context == "after_plot_col"
 
     def test_column_after_against(self):
         """Test after AGAINST keyword."""
-        context, partial, _ = get_context("WITH 'data.csv' PLOT price AGAINST ", 35)
+        context, partial, _ = get_context("WITH source('data.csv') PLOT price AGAINST ", 43)
         assert context == "column"
 
     def test_after_against_col_context(self):
         """Test after AGAINST column."""
-        context, partial, _ = get_context("WITH 'data.csv' PLOT price AGAINST time ", 40)
+        context, partial, _ = get_context("WITH source('data.csv') PLOT price AGAINST time ", 48)
         assert context == "after_against_col"
 
     def test_plot_type_context(self):
         """Test after AS keyword."""
-        context, partial, _ = get_context("WITH 'data.csv' PLOT y AGAINST x AS ", 36)
+        context, partial, _ = get_context("WITH source('data.csv') PLOT y AGAINST x AS ", 44)
         assert context == "plot_type"
 
     def test_plot_type_partial(self):
         """Test partial plot type."""
-        context, partial, _ = get_context("WITH 'data.csv' PLOT y AGAINST x AS 'li", 39)
+        context, partial, _ = get_context("WITH source('data.csv') PLOT y AGAINST x AS 'li", 47)
         assert context == "plot_type"
         assert "li" in partial or partial.endswith("li")
 
     def test_after_plot_type_context(self):
         """Test after complete AS clause."""
-        context, partial, _ = get_context("WITH 'data.csv' PLOT y AGAINST x AS 'scatter' ", 46)
+        context, partial, _ = get_context("WITH source('data.csv') PLOT y AGAINST x AS 'scatter' ", 54)
         assert context == "after_plot_type"
 
     def test_detected_plot_type(self):
         """Test that plot type is detected from query."""
-        _, _, plot_type = get_context("WITH 'data.csv' PLOT y AGAINST x AS 'line' ", 43)
+        _, _, plot_type = get_context("WITH source('data.csv') PLOT y AGAINST x AS 'line' ", 51)
         assert plot_type == "line"
 
     def test_filter_column_context(self):
         """Test after FILTER keyword."""
-        context, partial, _ = get_context("WITH 'data.csv' PLOT y AGAINST x FILTER ", 40)
+        context, partial, _ = get_context("WITH source('data.csv') PLOT y AGAINST x FILTER ", 48)
         assert context == "filter_column"
 
     def test_filter_op_context(self):
         """Test after FILTER column."""
-        context, partial, _ = get_context("WITH 'data.csv' PLOT y AGAINST x FILTER value ", 46)
+        context, partial, _ = get_context("WITH source('data.csv') PLOT y AGAINST x FILTER value ", 54)
         assert context == "filter_op"
 
     def test_filter_value_context(self):
         """Test after FILTER operator."""
-        context, partial, _ = get_context("WITH 'data.csv' PLOT y AGAINST x FILTER value > ", 48)
+        context, partial, _ = get_context("WITH source('data.csv') PLOT y AGAINST x FILTER value > ", 56)
         assert context == "filter_value"
 
     def test_filter_after_and(self):
         """Test after AND in FILTER."""
-        context, partial, _ = get_context("WITH 'data.csv' PLOT y AGAINST x FILTER a = 1 AND ", 50)
+        context, partial, _ = get_context("WITH source('data.csv') PLOT y AGAINST x FILTER a = 1 AND ", 58)
         assert context == "filter_column"
 
     def test_filter_after_or(self):
         """Test after OR in FILTER."""
-        context, partial, _ = get_context("WITH 'data.csv' PLOT y AGAINST x FILTER a = 1 OR ", 49)
+        context, partial, _ = get_context("WITH source('data.csv') PLOT y AGAINST x FILTER a = 1 OR ", 57)
         assert context == "filter_column"
 
     def test_format_key_context(self):
         """Test after FORMAT keyword."""
-        context, partial, _ = get_context("WITH 'data.csv' PLOT y AGAINST x FORMAT ", 40)
+        context, partial, _ = get_context("WITH source('data.csv') PLOT y AGAINST x FORMAT ", 48)
         assert context == "format_key"
 
     def test_format_color_context(self):
         """Test after color format option."""
-        context, partial, _ = get_context("WITH 'data.csv' PLOT y AGAINST x FORMAT marker_color = ", 55)
+        context, partial, _ = get_context("WITH source('data.csv') PLOT y AGAINST x FORMAT marker_color = ", 63)
         assert context == "format_color"
 
     def test_format_size_context(self):
         """Test after size format option."""
-        context, partial, _ = get_context("WITH 'data.csv' PLOT y AGAINST x FORMAT marker_size = ", 54)
+        context, partial, _ = get_context("WITH source('data.csv') PLOT y AGAINST x FORMAT marker_size = ", 62)
         assert context == "format_size"
 
     def test_format_after_and(self):
         """Test after AND in FORMAT."""
-        context, partial, _ = get_context("WITH 'data.csv' PLOT y AGAINST x FORMAT title = 'X' AND ", 56)
+        context, partial, _ = get_context("WITH source('data.csv') PLOT y AGAINST x FORMAT title = 'X' AND ", 64)
         assert context == "format_key"
 
     def test_none_context_for_title_value(self):
         """Test that title/label values don't get autocomplete."""
-        context, partial, _ = get_context("WITH 'data.csv' PLOT y AGAINST x FORMAT title = ", 48)
+        context, partial, _ = get_context("WITH source('data.csv') PLOT y AGAINST x FORMAT title = ", 56)
         assert context == "none"
 
 
@@ -332,19 +332,19 @@ class TestExtractFilePath:
 
     def test_single_quoted_path(self):
         """Test extracting single-quoted path."""
-        text = "WITH 'data.csv' PLOT y AGAINST x"
+        text = "WITH source('data.csv') PLOT y AGAINST x"
         result = extract_file_path(text)
         assert result == "data.csv"
 
     def test_double_quoted_path(self):
         """Test extracting double-quoted path."""
-        text = 'WITH "data.csv" PLOT y AGAINST x'
+        text = 'WITH source("data.csv") PLOT y AGAINST x'
         result = extract_file_path(text)
         assert result == "data.csv"
 
     def test_full_path(self):
         """Test extracting full file path."""
-        text = "WITH '/path/to/data/file.csv' PLOT y AGAINST x"
+        text = "WITH source('/path/to/data/file.csv') PLOT y AGAINST x"
         result = extract_file_path(text)
         assert result == "/path/to/data/file.csv"
 
@@ -356,13 +356,13 @@ class TestExtractFilePath:
 
     def test_incomplete_with_clause(self):
         """Test with incomplete WITH clause."""
-        text = "WITH 'partial"
+        text = "WITH source('partial"
         result = extract_file_path(text)
         assert result is None
 
     def test_case_insensitive(self):
         """Test case insensitivity."""
-        text = "with 'data.csv' plot y against x"
+        text = "with source('data.csv') plot y against x"
         result = extract_file_path(text)
         assert result == "data.csv"
 
@@ -429,12 +429,12 @@ class TestAutoCompleter:
         """Test completions after WITH."""
         completions = completer.get_completions("WITH ", 5)
 
-        # Should suggest quote
-        assert any("'" in c.text for c in completions)
+        # Should suggest source(
+        assert any("source(" in c.text for c in completions)
 
     def test_column_completions(self, completer, temp_csv: Path):
         """Test column completions."""
-        text = f"WITH '{temp_csv}' PLOT "
+        text = f"WITH source('{temp_csv}') PLOT "
         completions = completer.get_completions(text, len(text))
 
         # Should include columns from file
@@ -446,7 +446,7 @@ class TestAutoCompleter:
 
     def test_column_cache(self, completer, temp_csv: Path):
         """Test column caching."""
-        text = f"WITH '{temp_csv}' PLOT "
+        text = f"WITH source('{temp_csv}') PLOT "
         completer.get_completions(text, len(text))
 
         assert completer._cached_path == str(temp_csv)
@@ -454,17 +454,17 @@ class TestAutoCompleter:
 
     def test_cache_update_on_new_file(self, completer, temp_csv: Path, temp_parquet: Path):
         """Test cache updates when file changes."""
-        text1 = f"WITH '{temp_csv}' PLOT "
+        text1 = f"WITH source('{temp_csv}') PLOT "
         completer.get_completions(text1, len(text1))
         assert completer._cached_path == str(temp_csv)
 
-        text2 = f"WITH '{temp_parquet}' PLOT "
+        text2 = f"WITH source('{temp_parquet}') PLOT "
         completer.get_completions(text2, len(text2))
         assert completer._cached_path == str(temp_parquet)
 
     def test_aggregate_completions(self, completer, temp_csv: Path):
         """Test aggregate function completions."""
-        text = f"WITH '{temp_csv}' PLOT "
+        text = f"WITH source('{temp_csv}') PLOT "
         completions = completer.get_completions(text, len(text))
 
         func_completions = [c for c in completions if c.kind == "function"]
@@ -473,7 +473,7 @@ class TestAutoCompleter:
 
     def test_agg_column_completions(self, completer, temp_csv: Path):
         """Test completions inside aggregate function."""
-        text = f"WITH '{temp_csv}' PLOT count("
+        text = f"WITH source('{temp_csv}') PLOT count("
         completions = completer.get_completions(text, len(text))
 
         # Should include columns with closing paren
@@ -481,7 +481,7 @@ class TestAutoCompleter:
 
     def test_plot_type_completions(self, completer, temp_csv: Path):
         """Test plot type completions."""
-        text = f"WITH '{temp_csv}' PLOT y AGAINST x AS "
+        text = f"WITH source('{temp_csv}') PLOT y AGAINST x AS "
         completions = completer.get_completions(text, len(text))
 
         types = [c.text for c in completions if c.kind == "type"]
@@ -490,7 +490,7 @@ class TestAutoCompleter:
 
     def test_filter_op_completions(self, completer, temp_csv: Path):
         """Test filter operator completions."""
-        text = f"WITH '{temp_csv}' PLOT y AGAINST x FILTER value "
+        text = f"WITH source('{temp_csv}') PLOT y AGAINST x FILTER value "
         completions = completer.get_completions(text, len(text))
 
         ops = [c.text for c in completions if c.kind == "operator"]
@@ -499,7 +499,7 @@ class TestAutoCompleter:
 
     def test_format_key_completions(self, completer, temp_csv: Path):
         """Test format key completions."""
-        text = f"WITH '{temp_csv}' PLOT y AGAINST x FORMAT "
+        text = f"WITH source('{temp_csv}') PLOT y AGAINST x FORMAT "
         completions = completer.get_completions(text, len(text))
 
         keys = [c.text for c in completions]
@@ -507,7 +507,7 @@ class TestAutoCompleter:
 
     def test_format_color_completions(self, completer, temp_csv: Path):
         """Test format color value completions."""
-        text = f"WITH '{temp_csv}' PLOT y AGAINST x FORMAT marker_color = "
+        text = f"WITH source('{temp_csv}') PLOT y AGAINST x FORMAT marker_color = "
         # Use higher limit to get all color options
         completions = completer.get_completions(text, len(text), limit=20)
 
@@ -521,14 +521,14 @@ class TestAutoCompleter:
 
     def test_limit_parameter(self, completer, temp_csv: Path):
         """Test limit parameter."""
-        text = f"WITH '{temp_csv}' PLOT y AGAINST x FORMAT "
+        text = f"WITH source('{temp_csv}') PLOT y AGAINST x FORMAT "
         completions = completer.get_completions(text, len(text), limit=3)
 
         assert len(completions) <= 3
 
     def test_invalidate_cache(self, completer, temp_csv: Path):
         """Test cache invalidation."""
-        text = f"WITH '{temp_csv}' PLOT "
+        text = f"WITH source('{temp_csv}') PLOT "
         completer.get_completions(text, len(text))
 
         assert completer._cached_path is not None
@@ -540,7 +540,7 @@ class TestAutoCompleter:
 
     def test_completions_sorted(self, completer, temp_csv: Path):
         """Test that completions are sorted appropriately."""
-        text = f"WITH '{temp_csv}' PLOT "
+        text = f"WITH source('{temp_csv}') PLOT "
         completions = completer.get_completions(text, len(text))
 
         # Verify we get results
@@ -548,7 +548,7 @@ class TestAutoCompleter:
 
     def test_prefix_matching(self, completer, temp_csv: Path):
         """Test prefix matching in completions."""
-        text = f"WITH '{temp_csv}' PLOT x"
+        text = f"WITH source('{temp_csv}') PLOT x"
         completions = completer.get_completions(text, len(text))
 
         # Column 'x' should be first (prefix match)
@@ -557,7 +557,7 @@ class TestAutoCompleter:
 
     def test_no_duplicates(self, completer, temp_csv: Path):
         """Test that completions have no duplicates."""
-        text = f"WITH '{temp_csv}' PLOT "
+        text = f"WITH source('{temp_csv}') PLOT "
         completions = completer.get_completions(text, len(text))
 
         texts = [c.text for c in completions]
@@ -623,22 +623,22 @@ class TestAutoCompleterIntegration:
         assert len(completions) > 0
 
         # After file - should suggest PLOT
-        text = f"WITH '{temp_csv}' "
+        text = f"WITH source('{temp_csv}') "
         completions = completer.get_completions(text, len(text))
         assert any(c.text == "PLOT" for c in completions)
 
         # After PLOT - should suggest columns
-        text = f"WITH '{temp_csv}' PLOT "
+        text = f"WITH source('{temp_csv}') PLOT "
         completions = completer.get_completions(text, len(text))
         assert any(c.kind == "column" for c in completions)
 
         # After y - should suggest AGAINST
-        text = f"WITH '{temp_csv}' PLOT y "
+        text = f"WITH source('{temp_csv}') PLOT y "
         completions = completer.get_completions(text, len(text))
         assert any(c.text == "AGAINST" for c in completions)
 
         # After x - should suggest AS, FILTER, FORMAT
-        text = f"WITH '{temp_csv}' PLOT y AGAINST x "
+        text = f"WITH source('{temp_csv}') PLOT y AGAINST x "
         completions = completer.get_completions(text, len(text))
         assert any(c.text == "AS" for c in completions)
         assert any(c.text == "FILTER" for c in completions)
@@ -648,7 +648,7 @@ class TestAutoCompleterIntegration:
         """Test completions work with multiline queries."""
         completer = AutoCompleter()
 
-        text = f"""WITH '{temp_csv}'
+        text = f"""WITH source('{temp_csv}')
 PLOT y AGAINST x
 FORMAT """
         completions = completer.get_completions(text, len(text))
@@ -666,7 +666,7 @@ class TestMultiSeriesAutocomplete:
 
     def test_plot_keyword_after_first_series(self, completer, temp_csv: Path):
         """Test typing PLOT after completing first series suggests PLOT keyword."""
-        text = f"""WITH '{temp_csv}'
+        text = f"""WITH source('{temp_csv}')
 PLOT y AGAINST x AS 'line'
     FORMAT color = 'peach'
 PL"""
@@ -677,7 +677,7 @@ PL"""
 
     def test_column_after_second_plot(self, completer, temp_csv: Path):
         """Test column suggestions after second PLOT keyword."""
-        text = f"""WITH '{temp_csv}'
+        text = f"""WITH source('{temp_csv}')
 PLOT y AGAINST x AS 'line'
 PLOT """
         completions = completer.get_completions(text, len(text))
@@ -687,7 +687,7 @@ PLOT """
 
     def test_against_after_second_series_column(self, completer, temp_csv: Path):
         """Test AGAINST suggestion after column in second series."""
-        text = f"""WITH '{temp_csv}'
+        text = f"""WITH source('{temp_csv}')
 PLOT y AGAINST x AS 'line'
 PLOT y """
         completions = completer.get_completions(text, len(text))
@@ -697,7 +697,7 @@ PLOT y """
 
     def test_column_after_against_in_second_series(self, completer, temp_csv: Path):
         """Test column suggestions after AGAINST in second series."""
-        text = f"""WITH '{temp_csv}'
+        text = f"""WITH source('{temp_csv}')
 PLOT y AGAINST x AS 'line'
 PLOT y AGAINST """
         completions = completer.get_completions(text, len(text))
@@ -707,7 +707,7 @@ PLOT y AGAINST """
 
     def test_as_after_second_series_against_column(self, completer, temp_csv: Path):
         """Test AS/FILTER/FORMAT suggestions after AGAINST column in second series."""
-        text = f"""WITH '{temp_csv}'
+        text = f"""WITH source('{temp_csv}')
 PLOT y AGAINST x AS 'line'
 PLOT y AGAINST x """
         completions = completer.get_completions(text, len(text))
@@ -718,7 +718,7 @@ PLOT y AGAINST x """
 
     def test_format_after_format_value_suggests_plot_and_and(self, completer, temp_csv: Path):
         """Test suggestions after FORMAT value include PLOT for new series."""
-        text = f"""WITH '{temp_csv}'
+        text = f"""WITH source('{temp_csv}')
 PLOT y AGAINST x AS 'line'
     FORMAT color = 'blue' """
         completions = completer.get_completions(text, len(text))
@@ -729,7 +729,7 @@ PLOT y AGAINST x AS 'line'
 
     def test_three_series_third_plot_column(self, completer, temp_csv: Path):
         """Test column suggestions work for third series."""
-        text = f"""WITH '{temp_csv}'
+        text = f"""WITH source('{temp_csv}')
 PLOT y AGAINST x AS 'line'
 PLOT y AGAINST x AS 'scatter'
 PLOT """

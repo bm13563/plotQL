@@ -20,11 +20,11 @@ class TestFullPipeline:
 
     def test_simple_scatter(self, temp_csv: Path):
         """Test simple scatter plot end-to-end."""
-        query_str = f"WITH '{temp_csv}' PLOT y AGAINST x"
+        query_str = f"WITH source('{temp_csv}') PLOT y AGAINST x"
 
         # Parse
         ast = parse(query_str)
-        assert ast.source.path == str(temp_csv)
+        assert ast.source.args[0] == str(temp_csv)
 
         # Execute
         data_list = execute(ast)
@@ -40,7 +40,7 @@ class TestFullPipeline:
 
     def test_line_plot(self, temp_csv: Path):
         """Test line plot end-to-end."""
-        query_str = f"WITH '{temp_csv}' PLOT y AGAINST x AS 'line'"
+        query_str = f"WITH source('{temp_csv}') PLOT y AGAINST x AS 'line'"
 
         ast = parse(query_str)
         data_list = execute(ast)
@@ -52,7 +52,7 @@ class TestFullPipeline:
 
     def test_bar_plot(self, temp_csv_categorical: Path):
         """Test bar plot with aggregation end-to-end."""
-        query_str = f"WITH '{temp_csv_categorical}' PLOT sum(amount) AGAINST group AS 'bar'"
+        query_str = f"WITH source('{temp_csv_categorical}') PLOT sum(amount) AGAINST group AS 'bar'"
 
         ast = parse(query_str)
         assert ast.is_aggregate
@@ -67,7 +67,7 @@ class TestFullPipeline:
 
     def test_histogram(self, temp_csv: Path):
         """Test histogram end-to-end."""
-        query_str = f"WITH '{temp_csv}' PLOT y AGAINST x AS 'hist'"
+        query_str = f"WITH source('{temp_csv}') PLOT y AGAINST x AS 'hist'"
 
         ast = parse(query_str)
         data_list = execute(ast)
@@ -83,7 +83,7 @@ class TestFilteredQueries:
 
     def test_filter_equals(self, temp_csv: Path):
         """Test FILTER with equals condition."""
-        query_str = f"WITH '{temp_csv}' PLOT y AGAINST x FILTER category = 'A'"
+        query_str = f"WITH source('{temp_csv}') PLOT y AGAINST x FILTER category = 'A'"
 
         ast = parse(query_str)
         data_list = execute(ast)
@@ -99,7 +99,7 @@ class TestFilteredQueries:
 
     def test_filter_greater_than(self, temp_csv: Path):
         """Test FILTER with greater than condition."""
-        query_str = f"WITH '{temp_csv}' PLOT y AGAINST x FILTER x > 2"
+        query_str = f"WITH source('{temp_csv}') PLOT y AGAINST x FILTER x > 2"
 
         ast = parse(query_str)
         data_list = execute(ast)
@@ -113,7 +113,7 @@ class TestFilteredQueries:
 
     def test_filter_compound_and(self, temp_csv: Path):
         """Test FILTER with AND operator."""
-        query_str = f"WITH '{temp_csv}' PLOT y AGAINST x FILTER x > 1 AND x < 5"
+        query_str = f"WITH source('{temp_csv}') PLOT y AGAINST x FILTER x > 1 AND x < 5"
 
         ast = parse(query_str)
         data_list = execute(ast)
@@ -127,7 +127,7 @@ class TestFilteredQueries:
 
     def test_filter_compound_or(self, temp_csv: Path):
         """Test FILTER with OR operator."""
-        query_str = f"WITH '{temp_csv}' PLOT y AGAINST x FILTER x = 1 OR x = 5"
+        query_str = f"WITH source('{temp_csv}') PLOT y AGAINST x FILTER x = 1 OR x = 5"
 
         ast = parse(query_str)
         data_list = execute(ast)
@@ -145,7 +145,7 @@ class TestAggregationQueries:
 
     def test_count_aggregation(self, temp_csv_categorical: Path):
         """Test COUNT aggregation."""
-        query_str = f"WITH '{temp_csv_categorical}' PLOT count(amount) AGAINST group AS 'bar'"
+        query_str = f"WITH source('{temp_csv_categorical}') PLOT count(amount) AGAINST group AS 'bar'"
 
         ast = parse(query_str)
         data_list = execute(ast)
@@ -161,7 +161,7 @@ class TestAggregationQueries:
 
     def test_sum_aggregation(self, temp_csv_categorical: Path):
         """Test SUM aggregation."""
-        query_str = f"WITH '{temp_csv_categorical}' PLOT sum(amount) AGAINST group AS 'bar'"
+        query_str = f"WITH source('{temp_csv_categorical}') PLOT sum(amount) AGAINST group AS 'bar'"
 
         ast = parse(query_str)
         data_list = execute(ast)
@@ -177,7 +177,7 @@ class TestAggregationQueries:
 
     def test_avg_aggregation(self, temp_csv_categorical: Path):
         """Test AVG aggregation."""
-        query_str = f"WITH '{temp_csv_categorical}' PLOT avg(amount) AGAINST group AS 'bar'"
+        query_str = f"WITH source('{temp_csv_categorical}') PLOT avg(amount) AGAINST group AS 'bar'"
 
         ast = parse(query_str)
         data_list = execute(ast)
@@ -192,14 +192,14 @@ class TestAggregationQueries:
     def test_min_max_aggregation(self, temp_csv_categorical: Path):
         """Test MIN and MAX aggregation."""
         # MIN
-        query_str = f"WITH '{temp_csv_categorical}' PLOT min(amount) AGAINST group AS 'bar'"
+        query_str = f"WITH source('{temp_csv_categorical}') PLOT min(amount) AGAINST group AS 'bar'"
         ast = parse(query_str)
         data_list = execute(ast)
         data = data_list[0]
         assert data.filtered_count == 3
 
         # MAX
-        query_str = f"WITH '{temp_csv_categorical}' PLOT max(amount) AGAINST group AS 'bar'"
+        query_str = f"WITH source('{temp_csv_categorical}') PLOT max(amount) AGAINST group AS 'bar'"
         ast = parse(query_str)
         data_list = execute(ast)
         data = data_list[0]
@@ -211,7 +211,7 @@ class TestFormattedQueries:
 
     def test_format_title(self, temp_csv: Path):
         """Test FORMAT with title."""
-        query_str = f"WITH '{temp_csv}' PLOT y AGAINST x FORMAT title = 'Custom Title'"
+        query_str = f"WITH source('{temp_csv}') PLOT y AGAINST x FORMAT title = 'Custom Title'"
 
         ast = parse(query_str)
         assert ast.series[0].format.title == "Custom Title"
@@ -224,7 +224,7 @@ class TestFormattedQueries:
 
     def test_format_labels(self, temp_csv: Path):
         """Test FORMAT with axis labels."""
-        query_str = f"WITH '{temp_csv}' PLOT y AGAINST x FORMAT xlabel = 'X Label' AND ylabel = 'Y Label'"
+        query_str = f"WITH source('{temp_csv}') PLOT y AGAINST x FORMAT xlabel = 'X Label' AND ylabel = 'Y Label'"
 
         ast = parse(query_str)
         assert ast.series[0].format.xlabel == "X Label"
@@ -238,7 +238,7 @@ class TestFormattedQueries:
 
     def test_format_marker_color(self, temp_csv: Path):
         """Test FORMAT with marker_color."""
-        query_str = f"WITH '{temp_csv}' PLOT y AGAINST x FORMAT marker_color = blue"
+        query_str = f"WITH source('{temp_csv}') PLOT y AGAINST x FORMAT marker_color = blue"
 
         ast = parse(query_str)
         data_list = execute(ast)
@@ -253,7 +253,7 @@ class TestFormattedQueries:
 
     def test_format_marker_size(self, temp_csv: Path):
         """Test FORMAT with marker_size."""
-        query_str = f"WITH '{temp_csv}' PLOT y AGAINST x FORMAT marker_size = 4"
+        query_str = f"WITH source('{temp_csv}') PLOT y AGAINST x FORMAT marker_size = 4"
 
         ast = parse(query_str)
         data_list = execute(ast)
@@ -268,7 +268,7 @@ class TestFormattedQueries:
 
     def test_format_dynamic_marker_color(self, temp_csv: Path):
         """Test FORMAT with column reference for marker_color."""
-        query_str = f"WITH '{temp_csv}' PLOT y AGAINST x FORMAT marker_color = category"
+        query_str = f"WITH source('{temp_csv}') PLOT y AGAINST x FORMAT marker_color = category"
 
         ast = parse(query_str)
         data_list = execute(ast)
@@ -284,7 +284,7 @@ class TestFormattedQueries:
 
     def test_format_dynamic_marker_size(self, temp_csv: Path):
         """Test FORMAT with column reference for marker_size."""
-        query_str = f"WITH '{temp_csv}' PLOT y AGAINST x FORMAT marker_size = value"
+        query_str = f"WITH source('{temp_csv}') PLOT y AGAINST x FORMAT marker_size = value"
 
         ast = parse(query_str)
         data_list = execute(ast)
@@ -299,7 +299,7 @@ class TestFormattedQueries:
 
     def test_format_line_color(self, temp_csv: Path):
         """Test FORMAT with line_color for line plot."""
-        query_str = f"WITH '{temp_csv}' PLOT y AGAINST x AS 'line' FORMAT line_color = red"
+        query_str = f"WITH source('{temp_csv}') PLOT y AGAINST x AS 'line' FORMAT line_color = red"
 
         ast = parse(query_str)
         assert ast.series[0].format.line_color == "red"
@@ -317,7 +317,7 @@ class TestComplexQueries:
     def test_filter_and_aggregation(self, temp_csv_categorical: Path):
         """Test FILTER + aggregation."""
         query_str = (
-            f"WITH '{temp_csv_categorical}' "
+            f"WITH source('{temp_csv_categorical}') "
             "PLOT sum(amount) AGAINST group AS 'bar' "
             "FILTER amount > 20"
         )
@@ -337,7 +337,7 @@ class TestComplexQueries:
     def test_filter_aggregation_and_format(self, temp_csv_categorical: Path):
         """Test FILTER + aggregation + FORMAT."""
         query_str = (
-            f"WITH '{temp_csv_categorical}' "
+            f"WITH source('{temp_csv_categorical}') "
             "PLOT sum(amount) AGAINST group AS 'bar' "
             "FILTER amount > 10 "
             "FORMAT title = 'Sales Report' AND color = green"
@@ -354,7 +354,7 @@ class TestComplexQueries:
     def test_all_clauses(self, temp_csv: Path):
         """Test query with all clauses."""
         query_str = (
-            f"WITH '{temp_csv}' "
+            f"WITH source('{temp_csv}') "
             "PLOT y AGAINST x AS 'line' "
             "FILTER x > 1 AND x < 5 "
             "FORMAT title = 'Filtered Line' AND xlabel = 'Position' AND ylabel = 'Value' AND line_color = blue"
@@ -379,7 +379,7 @@ class TestFileFormats:
 
     def test_csv_file(self, temp_csv: Path):
         """Test CSV file loading."""
-        query_str = f"WITH '{temp_csv}' PLOT y AGAINST x"
+        query_str = f"WITH source('{temp_csv}') PLOT y AGAINST x"
         ast = parse(query_str)
         data_list = execute(ast)
         data = data_list[0]
@@ -387,7 +387,7 @@ class TestFileFormats:
 
     def test_parquet_file(self, temp_parquet: Path):
         """Test Parquet file loading."""
-        query_str = f"WITH '{temp_parquet}' PLOT y AGAINST x"
+        query_str = f"WITH source('{temp_parquet}') PLOT y AGAINST x"
         ast = parse(query_str)
         data_list = execute(ast)
         data = data_list[0]
@@ -395,7 +395,7 @@ class TestFileFormats:
 
     def test_json_file(self, temp_json: Path):
         """Test JSON file loading."""
-        query_str = f"WITH '{temp_json}' PLOT y AGAINST x"
+        query_str = f"WITH source('{temp_json}') PLOT y AGAINST x"
         ast = parse(query_str)
         data_list = execute(ast)
         data = data_list[0]
@@ -403,7 +403,7 @@ class TestFileFormats:
 
     def test_ndjson_file(self, temp_ndjson: Path):
         """Test NDJSON file loading."""
-        query_str = f"WITH '{temp_ndjson}' PLOT y AGAINST x"
+        query_str = f"WITH source('{temp_ndjson}') PLOT y AGAINST x"
         ast = parse(query_str)
         data_list = execute(ast)
         data = data_list[0]
@@ -415,7 +415,7 @@ class TestTimestampHandling:
 
     def test_timestamp_detection(self, temp_csv_with_timestamps: Path):
         """Test that timestamps are detected."""
-        query_str = f"WITH '{temp_csv_with_timestamps}' PLOT value AGAINST timestamp"
+        query_str = f"WITH source('{temp_csv_with_timestamps}') PLOT value AGAINST timestamp"
 
         ast = parse(query_str)
         data_list = execute(ast)
@@ -437,7 +437,7 @@ class TestRealDataFile:
         if not trades_csv.exists():
             pytest.skip("trades.csv not found")
 
-        query_str = f"WITH '{trades_csv}' PLOT price AGAINST received_at"
+        query_str = f"WITH source('{trades_csv}') PLOT price AGAINST received_at"
 
         ast = parse(query_str)
         data_list = execute(ast)
@@ -456,7 +456,7 @@ class TestRealDataFile:
         if not trades_csv.exists():
             pytest.skip("trades.csv not found")
 
-        query_str = f"WITH '{trades_csv}' PLOT price AGAINST received_at FILTER price > 10"
+        query_str = f"WITH source('{trades_csv}') PLOT price AGAINST received_at FILTER price > 10"
 
         ast = parse(query_str)
         data_list = execute(ast)
@@ -474,7 +474,7 @@ class TestRealDataFile:
             pytest.skip("trades.csv not found")
 
         query_str = (
-            f"WITH '{trades_csv}' "
+            f"WITH source('{trades_csv}') "
             "PLOT price AGAINST received_at "
             "FORMAT title = 'Price Over Time' AND marker_color = tx_sol_amount"
         )
@@ -497,7 +497,7 @@ class TestErrorHandling:
 
     def test_file_not_found(self):
         """Test error when file doesn't exist."""
-        query_str = "WITH '/nonexistent/file.csv' PLOT y AGAINST x"
+        query_str = "WITH source('/nonexistent/file.csv') PLOT y AGAINST x"
 
         ast = parse(query_str)
 
@@ -508,7 +508,7 @@ class TestErrorHandling:
 
     def test_column_not_found(self, temp_csv: Path):
         """Test error when column doesn't exist."""
-        query_str = f"WITH '{temp_csv}' PLOT nonexistent AGAINST x"
+        query_str = f"WITH source('{temp_csv}') PLOT nonexistent AGAINST x"
 
         ast = parse(query_str)
 
@@ -519,7 +519,7 @@ class TestErrorHandling:
 
     def test_invalid_marker_size_for_non_scatter(self, temp_csv: Path):
         """Test error when marker_size used with non-scatter plot."""
-        query_str = f"WITH '{temp_csv}' PLOT y AGAINST x AS 'line' FORMAT marker_size = 3"
+        query_str = f"WITH source('{temp_csv}') PLOT y AGAINST x AS 'line' FORMAT marker_size = 3"
 
         ast = parse(query_str)
 
@@ -546,7 +546,7 @@ class TestOutputQuality:
 
     def test_image_dimensions(self, temp_csv: Path):
         """Test that output has correct dimensions."""
-        query_str = f"WITH '{temp_csv}' PLOT y AGAINST x"
+        query_str = f"WITH source('{temp_csv}') PLOT y AGAINST x"
 
         ast = parse(query_str)
         data_list = execute(ast)
@@ -561,7 +561,7 @@ class TestOutputQuality:
 
     def test_image_is_non_empty(self, temp_csv: Path):
         """Test that output image has content."""
-        query_str = f"WITH '{temp_csv}' PLOT y AGAINST x"
+        query_str = f"WITH source('{temp_csv}') PLOT y AGAINST x"
 
         ast = parse(query_str)
         data_list = execute(ast)
@@ -578,7 +578,7 @@ class TestOutputQuality:
 
     def test_svg_output(self, temp_csv: Path):
         """Test SVG output format."""
-        query_str = f"WITH '{temp_csv}' PLOT y AGAINST x"
+        query_str = f"WITH source('{temp_csv}') PLOT y AGAINST x"
 
         ast = parse(query_str)
         data_list = execute(ast)

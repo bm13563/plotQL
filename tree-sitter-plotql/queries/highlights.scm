@@ -2,6 +2,7 @@
 
 ; Keywords - bright mint/teal green
 (with) @keyword
+(source) @keyword
 (plot) @keyword
 (against) @keyword
 (as) @keyword
@@ -16,10 +17,6 @@
 
 ; Functions - warm golden yellow
 (aggregate_func) @function
-
-; Connector functions - same as aggregate functions
-(file_connector) @function.builtin
-(clickhouse_connector) @function.builtin
 
 ; Strings - soft lavender/purple
 (string) @string

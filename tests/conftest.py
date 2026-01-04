@@ -15,11 +15,11 @@ from plotql.core.ast import (
     ComparisonOp,
     Condition,
     FormatOptions,
-    LiteralSource,
     LogicalOp,
     PlotQuery,
     PlotSeries,
     PlotType,
+    SourceRef,
     WhereClause,
 )
 from plotql.core.executor import PlotData, SizeInfo, ColorInfo
@@ -42,7 +42,7 @@ def make_plot_query(
         filter=filter,
         format=format or FormatOptions(),
     )
-    return PlotQuery(source=LiteralSource(path=source), series=[series])
+    return PlotQuery(source=SourceRef(args=[source], is_literal=True), series=[series])
 
 
 # =============================================================================

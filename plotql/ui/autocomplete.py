@@ -27,17 +27,12 @@ class Completion:
 
 # PlotQL keywords
 KEYWORDS = [
-    "WITH", "PLOT", "AGAINST", "AS", "FILTER", "FORMAT", "AND", "OR", "NOT",
+    "WITH", "SOURCE", "PLOT", "AGAINST", "AS", "FILTER", "FORMAT", "AND", "OR", "NOT",
 ]
 
 # Aggregate functions
 FUNCTIONS = [
     "count", "sum", "avg", "min", "max", "median",
-]
-
-# Connector functions
-CONNECTORS = [
-    "file", "clickhouse",
 ]
 
 # Plot types
@@ -88,17 +83,23 @@ def get_context(text: str, cursor_pos: int) -> Tuple[str, str, Optional[str]]:
         partial_col = agg_match.group(2) or ""
         return ("agg_column", partial_col, detected_plot_type)
 
-    # Check if we're inside a connector function (e.g., file(|) or clickhouse(|) )
-    connector_match = re.search(r"\b(file|clickhouse)\(\s*([a-zA-Z_]*)?$", before, re.IGNORECASE)
-    if connector_match:
-        connector_type = connector_match.group(1).lower()
-        partial_alias = connector_match.group(2) or ""
-        return ("connector_alias", partial_alias, detected_plot_type, connector_type)
+    # Check if we're inside source() - could be literal path, alias, or table name
+    # source('path - literal file path
+    source_literal_match = re.search(r"\bsource\(\s*['\"]([^'\"]*?)$", before, re.IGNORECASE)
+    if source_literal_match:
+        return ("file_path", source_literal_match.group(1), detected_plot_type)
 
-    # Check if we're inside a string after WITH (file path context)
-    with_match = re.search(r"WITH\s+['\"]([^'\"]*?)$", before, re.IGNORECASE)
-    if with_match:
-        return ("file_path", with_match.group(1), detected_plot_type)
+    # source(alias, table - second arg is table name (no completions for now)
+    source_table_match = re.search(r"\bsource\(\s*[a-zA-Z_][a-zA-Z0-9_]*\s*,\s*([a-zA-Z_]*)?$", before, re.IGNORECASE)
+    if source_table_match:
+        partial_table = source_table_match.group(1) or ""
+        return ("source_table", partial_table, detected_plot_type)
+
+    # source(alias - first arg is source alias
+    source_alias_match = re.search(r"\bsource\(\s*([a-zA-Z_]*)?$", before, re.IGNORECASE)
+    if source_alias_match:
+        partial_alias = source_alias_match.group(1) or ""
+        return ("source_alias", partial_alias, detected_plot_type)
 
     # For multi-series support, find the last PLOT keyword and work from there
     # This isolates context to the current series being typed
@@ -198,21 +199,17 @@ def get_context(text: str, cursor_pos: int) -> Tuple[str, str, Optional[str]]:
     if re.search(r"PLOT\s*$", before_upper):
         return ("column", partial, detected_plot_type)
 
-    # After WITH + quoted string, suggest PLOT
-    if re.search(r"WITH\s+['\"][^'\"]+['\"]\s*$", before, re.IGNORECASE):
+    # After WITH source(...), suggest PLOT
+    if re.search(r"WITH\s+source\([^)]+\)\s*$", before, re.IGNORECASE):
         return ("after_with", partial, detected_plot_type)
 
-    # After WITH + connector call (e.g., "WITH file(trades) "), suggest PLOT
-    if re.search(r"WITH\s+(file|clickhouse)\([a-zA-Z_][a-zA-Z0-9_]*\)\s*$", before, re.IGNORECASE):
-        return ("after_with", partial, detected_plot_type)
-
-    # After WITH, can type quote for file path OR connector function
+    # After WITH, suggest source(
     if re.search(r"WITH\s*$", before_upper):
-        return ("after_with_source", partial, detected_plot_type)
+        return ("after_with_keyword", partial, detected_plot_type)
 
-    # Typing a connector name after WITH (e.g., "WITH fi")
-    if re.search(r"WITH\s+[a-zA-Z]+$", before, re.IGNORECASE) and not re.search(r"WITH\s+['\"]", before):
-        return ("after_with_source", partial, detected_plot_type)
+    # Typing "source" after WITH (e.g., "WITH sou")
+    if re.search(r"WITH\s+[a-zA-Z]+$", before, re.IGNORECASE):
+        return ("after_with_keyword", partial, detected_plot_type)
 
     # Empty or start - also handle newlines after complete statements
     if not before_stripped or before_stripped.upper() == partial.upper():
@@ -330,9 +327,39 @@ def get_file_completions(partial_path: str, limit: int = 10) -> List[Completion]
 
 
 def extract_file_path(text: str) -> Optional[str]:
-    """Extract the file path from a WITH clause."""
-    match = re.search(r"WITH\s+['\"]([^'\"]+)['\"]", text, re.IGNORECASE)
-    return match.group(1) if match else None
+    """Extract the file path from a WITH source() clause."""
+    # New syntax: WITH source('path.csv')
+    match = re.search(r"WITH\s+source\(\s*['\"]([^'\"]+)['\"]\s*\)", text, re.IGNORECASE)
+    if match:
+        return match.group(1)
+
+    # New syntax: WITH source(alias, ...) - look up in config
+    # Captures alias and optional comma-separated segments
+    alias_match = re.search(
+        r"WITH\s+source\(\s*([a-zA-Z_][a-zA-Z0-9_]*)(?:\s*,\s*([^)]+))?\s*\)",
+        text,
+        re.IGNORECASE
+    )
+    if alias_match:
+        try:
+            from plotql.core.config import get_source_config
+            alias = alias_match.group(1)
+            segments_str = alias_match.group(2)
+            source_config = get_source_config(alias)
+
+            if source_config.type == "file":
+                return source_config.config.get("path")
+
+            if source_config.type == "folder" and segments_str:
+                # Parse segments and join with root path
+                segments = [s.strip() for s in segments_str.split(",")]
+                root = Path(source_config.config.get("path", ""))
+                return str(root.joinpath(*segments))
+
+        except Exception:
+            pass
+
+    return None
 
 
 def get_columns_from_file(file_path: str) -> List[str]:
@@ -408,17 +435,10 @@ class AutoCompleter:
             if "WITH".startswith(partial_upper) or not partial:
                 completions.append(Completion("WITH", "WITH", "keyword"))
 
-        elif context == "need_quote":
-            # After WITH, need to type a quote (backward compat)
-            completions.append(Completion("'", "' (open quote)", "syntax"))
-
-        elif context == "after_with_source":
-            # After WITH, suggest connectors or quote for literal path
-            for conn in CONNECTORS:
-                if conn.startswith(partial_lower) or not partial:
-                    completions.append(Completion(f"{conn}(", conn, "connector"))
-            if not partial or "'".startswith(partial):
-                completions.append(Completion("'", "' (file path)", "syntax"))
+        elif context == "after_with_keyword":
+            # After WITH, suggest source(
+            if "source".startswith(partial_lower) or not partial:
+                completions.append(Completion("source(", "source", "keyword"))
 
         elif context == "file_path":
             # File path completions (no quotes needed, they're already there)
@@ -445,18 +465,26 @@ class AutoCompleter:
                 if col.lower().startswith(partial_lower) or not partial:
                     completions.append(Completion(col + ")", col, "column"))
 
-        elif context == "connector_alias":
-            # Inside connector function - suggest aliases from config
+        elif context == "source_alias":
+            # Inside source() - suggest source aliases from config
             try:
-                from plotql.core.config import list_aliases
-                if connector_type:
-                    aliases = list_aliases(connector_type)
-                    for alias in aliases:
-                        if alias.lower().startswith(partial_lower) or not partial:
-                            completions.append(Completion(alias + ")", alias, "alias"))
+                from plotql.core.config import list_sources
+                aliases = list_sources()
+                for alias in aliases:
+                    if alias.lower().startswith(partial_lower) or not partial:
+                        # Add ) for file sources, , for database sources (need table)
+                        completions.append(Completion(alias, alias, "alias"))
             except Exception:
                 # Config not available or error - no completions
                 pass
+            # Also suggest quote for literal file path
+            if not partial or "'".startswith(partial):
+                completions.append(Completion("'", "' (file path)", "syntax"))
+
+        elif context == "source_table":
+            # Inside source(alias, ) - table name context
+            # No completions for now (would need DB schema introspection)
+            pass
 
         elif context == "after_plot_col":
             # After PLOT column, only AGAINST is valid

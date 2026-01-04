@@ -35,7 +35,7 @@ class TestPlotQLAppCreation:
 
     def test_app_with_initial_query(self):
         """Test app creation with initial query."""
-        query = "WITH 'test.csv' PLOT y AGAINST x"
+        query = "WITH source('test.csv') PLOT y AGAINST x"
         app = PlotQLApp(initial_query=query)
         assert app.initial_query == query
 
@@ -244,7 +244,7 @@ class TestQueryExecution:
         app = PlotQLApp()
         async with app.run_test() as pilot:
             editor = app.query_one("#editor", QueryEditor)
-            editor.text = "WITH '/nonexistent/file.csv' PLOT y AGAINST x"
+            editor.text = "WITH source('/nonexistent/file.csv') PLOT y AGAINST x"
 
             # Execute - should handle error gracefully
             await pilot.press("f5")
@@ -255,7 +255,7 @@ class TestQueryExecution:
         app = PlotQLApp()
         async with app.run_test() as pilot:
             editor = app.query_one("#editor", QueryEditor)
-            editor.text = f"WITH '{temp_csv}' PLOT y AGAINST x"
+            editor.text = f"WITH source('{temp_csv}') PLOT y AGAINST x"
 
             await pilot.press("f5")
             await pilot.pause()
@@ -267,7 +267,7 @@ class TestQueryExecution:
         app = PlotQLApp()
         async with app.run_test() as pilot:
             editor = app.query_one("#editor", QueryEditor)
-            editor.text = f"WITH '{temp_csv}' PLOT y AGAINST x FILTER x > 2"
+            editor.text = f"WITH source('{temp_csv}') PLOT y AGAINST x FILTER x > 2"
 
             await pilot.press("f5")
             await pilot.pause()
@@ -278,7 +278,7 @@ class TestQueryExecution:
         app = PlotQLApp()
         async with app.run_test() as pilot:
             editor = app.query_one("#editor", QueryEditor)
-            editor.text = f"WITH '{temp_csv_categorical}' PLOT sum(amount) AGAINST group AS 'bar'"
+            editor.text = f"WITH source('{temp_csv_categorical}') PLOT sum(amount) AGAINST group AS 'bar'"
 
             await pilot.press("f5")
             await pilot.pause()
@@ -294,7 +294,7 @@ class TestAppInitialization:
     @pytest.mark.asyncio
     async def test_app_with_initial_query_auto_executes(self, temp_csv: Path):
         """Test app with initial query auto-executes."""
-        query = f"WITH '{temp_csv}' PLOT y AGAINST x"
+        query = f"WITH source('{temp_csv}') PLOT y AGAINST x"
         app = PlotQLApp(initial_query=query)
 
         async with app.run_test() as pilot:
@@ -331,7 +331,7 @@ class TestKeyboardNavigation:
         app = PlotQLApp()
         async with app.run_test() as pilot:
             editor = app.query_one("#editor", QueryEditor)
-            editor.text = f"WITH '{temp_csv}' PLOT y AGAINST x"
+            editor.text = f"WITH source('{temp_csv}') PLOT y AGAINST x"
 
             # F5 should execute without error
             await pilot.press("f5")
@@ -417,7 +417,7 @@ class TestPlotRendering:
         app = PlotQLApp()
         async with app.run_test() as pilot:
             editor = app.query_one("#editor", QueryEditor)
-            editor.text = f"WITH '{temp_csv}' PLOT y AGAINST x"
+            editor.text = f"WITH source('{temp_csv}') PLOT y AGAINST x"
 
             await pilot.press("f5")
             await pilot.pause()
@@ -428,7 +428,7 @@ class TestPlotRendering:
         app = PlotQLApp()
         async with app.run_test() as pilot:
             editor = app.query_one("#editor", QueryEditor)
-            editor.text = f"WITH '{temp_csv}' PLOT y AGAINST x AS 'line'"
+            editor.text = f"WITH source('{temp_csv}') PLOT y AGAINST x AS 'line'"
 
             await pilot.press("f5")
             await pilot.pause()
@@ -439,7 +439,7 @@ class TestPlotRendering:
         app = PlotQLApp()
         async with app.run_test() as pilot:
             editor = app.query_one("#editor", QueryEditor)
-            editor.text = f"WITH '{temp_csv_categorical}' PLOT sum(amount) AGAINST group AS 'bar'"
+            editor.text = f"WITH source('{temp_csv_categorical}') PLOT sum(amount) AGAINST group AS 'bar'"
 
             await pilot.press("f5")
             await pilot.pause()
@@ -450,7 +450,7 @@ class TestPlotRendering:
         app = PlotQLApp()
         async with app.run_test() as pilot:
             editor = app.query_one("#editor", QueryEditor)
-            editor.text = f"WITH '{temp_csv}' PLOT y AGAINST x AS 'hist'"
+            editor.text = f"WITH source('{temp_csv}') PLOT y AGAINST x AS 'hist'"
 
             await pilot.press("f5")
             await pilot.pause()
@@ -469,7 +469,7 @@ class TestFormatOptions:
         app = PlotQLApp()
         async with app.run_test() as pilot:
             editor = app.query_one("#editor", QueryEditor)
-            editor.text = f"WITH '{temp_csv}' PLOT y AGAINST x FORMAT title = 'My Plot'"
+            editor.text = f"WITH source('{temp_csv}') PLOT y AGAINST x FORMAT title = 'My Plot'"
 
             await pilot.press("f5")
             await pilot.pause()
@@ -480,7 +480,7 @@ class TestFormatOptions:
         app = PlotQLApp()
         async with app.run_test() as pilot:
             editor = app.query_one("#editor", QueryEditor)
-            editor.text = f"WITH '{temp_csv}' PLOT y AGAINST x FORMAT xlabel = 'X' AND ylabel = 'Y'"
+            editor.text = f"WITH source('{temp_csv}') PLOT y AGAINST x FORMAT xlabel = 'X' AND ylabel = 'Y'"
 
             await pilot.press("f5")
             await pilot.pause()
@@ -491,7 +491,7 @@ class TestFormatOptions:
         app = PlotQLApp()
         async with app.run_test() as pilot:
             editor = app.query_one("#editor", QueryEditor)
-            editor.text = f"WITH '{temp_csv}' PLOT y AGAINST x FORMAT marker_color = blue"
+            editor.text = f"WITH source('{temp_csv}') PLOT y AGAINST x FORMAT marker_color = blue"
 
             await pilot.press("f5")
             await pilot.pause()
@@ -522,7 +522,7 @@ class TestErrorDisplay:
         app = PlotQLApp()
         async with app.run_test() as pilot:
             editor = app.query_one("#editor", QueryEditor)
-            editor.text = "WITH '/no/such/file.csv' PLOT y AGAINST x"
+            editor.text = "WITH source('/no/such/file.csv') PLOT y AGAINST x"
 
             await pilot.press("f5")
             await pilot.pause()
@@ -533,7 +533,7 @@ class TestErrorDisplay:
         app = PlotQLApp()
         async with app.run_test() as pilot:
             editor = app.query_one("#editor", QueryEditor)
-            editor.text = f"WITH '{temp_csv}' PLOT nonexistent AGAINST x"
+            editor.text = f"WITH source('{temp_csv}') PLOT nonexistent AGAINST x"
 
             await pilot.press("f5")
             await pilot.pause()
@@ -581,7 +581,7 @@ class TestFullPipeline:
             editor = app.query_one("#editor", QueryEditor)
 
             # Input query
-            editor.text = f"WITH '{temp_csv}' PLOT y AGAINST x"
+            editor.text = f"WITH source('{temp_csv}') PLOT y AGAINST x"
 
             # Execute
             await pilot.press("f5")
@@ -594,7 +594,7 @@ class TestFullPipeline:
         async with app.run_test() as pilot:
             editor = app.query_one("#editor", QueryEditor)
 
-            editor.text = f"WITH '{temp_csv}' PLOT y AGAINST x FILTER x > 2"
+            editor.text = f"WITH source('{temp_csv}') PLOT y AGAINST x FILTER x > 2"
 
             await pilot.press("f5")
             await pilot.pause()
@@ -606,7 +606,7 @@ class TestFullPipeline:
         async with app.run_test() as pilot:
             editor = app.query_one("#editor", QueryEditor)
 
-            editor.text = f"WITH '{temp_csv_categorical}' PLOT count(amount) AGAINST group AS 'bar'"
+            editor.text = f"WITH source('{temp_csv_categorical}') PLOT count(amount) AGAINST group AS 'bar'"
 
             await pilot.press("f5")
             await pilot.pause()
@@ -619,7 +619,7 @@ class TestFullPipeline:
             editor = app.query_one("#editor", QueryEditor)
 
             editor.text = (
-                f"WITH '{temp_csv}' "
+                f"WITH source('{temp_csv}') "
                 "PLOT y AGAINST x AS 'line' "
                 "FILTER x > 1 AND x < 5 "
                 "FORMAT title = 'Test' AND line_color = blue"
@@ -636,12 +636,12 @@ class TestFullPipeline:
             editor = app.query_one("#editor", QueryEditor)
 
             # First query
-            editor.text = f"WITH '{temp_csv}' PLOT y AGAINST x"
+            editor.text = f"WITH source('{temp_csv}') PLOT y AGAINST x"
             await pilot.press("f5")
             await pilot.pause()
 
             # Second query - different file and plot type
-            editor.text = f"WITH '{temp_csv_categorical}' PLOT sum(amount) AGAINST group AS 'bar'"
+            editor.text = f"WITH source('{temp_csv_categorical}') PLOT sum(amount) AGAINST group AS 'bar'"
             await pilot.press("f5")
             await pilot.pause()
 
@@ -651,7 +651,7 @@ class TestFullPipeline:
             await pilot.pause()
 
             # Fourth query - back to valid
-            editor.text = f"WITH '{temp_csv}' PLOT y AGAINST x"
+            editor.text = f"WITH source('{temp_csv}') PLOT y AGAINST x"
             await pilot.press("f5")
             await pilot.pause()
 
@@ -673,5 +673,5 @@ class TestRunFunction:
         from plotql.ui.tui import PlotQLApp
 
         # Just verify the app can be instantiated
-        app = PlotQLApp(initial_query="WITH 'test.csv' PLOT y AGAINST x")
+        app = PlotQLApp(initial_query="WITH source('test.csv') PLOT y AGAINST x")
         assert app.initial_query is not None

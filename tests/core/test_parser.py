@@ -305,20 +305,23 @@ class TestLexerCompleteQueries:
 
     def test_simple_query(self):
         """Test tokenizing a simple query."""
-        query = "WITH 'data.csv' PLOT y AGAINST x"
+        query = "WITH source('data.csv') PLOT y AGAINST x"
         lexer = Lexer(query)
         tokens = list(lexer.tokenize())
 
         assert tokens[0].type == "WITH"
-        assert tokens[1].type == "STRING"
-        assert tokens[2].type == "PLOT"
-        assert tokens[3].type == "IDENT"
-        assert tokens[4].type == "AGAINST"
-        assert tokens[5].type == "IDENT"
+        assert tokens[1].type == "SOURCE"
+        assert tokens[2].type == "LPAREN"
+        assert tokens[3].type == "STRING"
+        assert tokens[4].type == "RPAREN"
+        assert tokens[5].type == "PLOT"
+        assert tokens[6].type == "IDENT"
+        assert tokens[7].type == "AGAINST"
+        assert tokens[8].type == "IDENT"
 
     def test_query_with_filter(self):
         """Test tokenizing query with FILTER clause."""
-        query = "WITH 'data.csv' PLOT y AGAINST x FILTER value > 10"
+        query = "WITH source('data.csv') PLOT y AGAINST x FILTER value > 10"
         lexer = Lexer(query)
         tokens = list(lexer.tokenize())
 
@@ -329,7 +332,7 @@ class TestLexerCompleteQueries:
 
     def test_query_with_aggregation(self):
         """Test tokenizing query with aggregation."""
-        query = "WITH 'data.csv' PLOT count(x) AGAINST category"
+        query = "WITH source('data.csv') PLOT count(x) AGAINST category"
         lexer = Lexer(query)
         tokens = list(lexer.tokenize())
 
@@ -340,7 +343,7 @@ class TestLexerCompleteQueries:
 
     def test_query_with_format(self):
         """Test tokenizing query with FORMAT clause."""
-        query = "WITH 'data.csv' PLOT y AGAINST x FORMAT title = 'Test'"
+        query = "WITH source('data.csv') PLOT y AGAINST x FORMAT title = 'Test'"
         lexer = Lexer(query)
         tokens = list(lexer.tokenize())
 
@@ -357,10 +360,10 @@ class TestParserBasics:
 
     def test_parse_minimal_query(self):
         """Test parsing minimal valid query."""
-        query = "WITH 'data.csv' PLOT y AGAINST x"
+        query = "WITH source('data.csv') PLOT y AGAINST x"
         result = parse(query)
 
-        assert result.source.path == "data.csv"
+        assert result.source.args[0] == "data.csv"
         assert result.series[0].x_column.name == "x"
         assert result.series[0].y_column.name == "y"
         assert result.series[0].plot_type == PlotType.SCATTER
@@ -368,7 +371,7 @@ class TestParserBasics:
     def test_parse_returns_plot_query(self):
         """Test that parse returns a PlotQuery."""
         from plotql.core.ast import PlotQuery
-        result = parse("WITH 'data.csv' PLOT y AGAINST x")
+        result = parse("WITH source('data.csv') PLOT y AGAINST x")
         assert isinstance(result, PlotQuery)
 
 
@@ -377,23 +380,23 @@ class TestParserWithClause:
 
     def test_with_single_quotes(self):
         """Test WITH clause with single quotes."""
-        result = parse("WITH 'file.csv' PLOT y AGAINST x")
-        assert result.source.path == "file.csv"
+        result = parse("WITH source('file.csv') PLOT y AGAINST x")
+        assert result.source.args[0] == "file.csv"
 
     def test_with_double_quotes(self):
         """Test WITH clause with double quotes."""
-        result = parse('WITH "file.csv" PLOT y AGAINST x')
-        assert result.source.path == "file.csv"
+        result = parse('WITH source("file.csv") PLOT y AGAINST x')
+        assert result.source.args[0] == "file.csv"
 
     def test_with_path(self):
         """Test WITH clause with full path."""
-        result = parse("WITH '/path/to/data.csv' PLOT y AGAINST x")
-        assert result.source.path == "/path/to/data.csv"
+        result = parse("WITH source('/path/to/data.csv') PLOT y AGAINST x")
+        assert result.source.args[0] == "/path/to/data.csv"
 
     def test_with_relative_path(self):
         """Test WITH clause with relative path."""
-        result = parse("WITH './data/file.csv' PLOT y AGAINST x")
-        assert result.source.path == "./data/file.csv"
+        result = parse("WITH source('./data/file.csv') PLOT y AGAINST x")
+        assert result.source.args[0] == "./data/file.csv"
 
 
 class TestParserPlotClause:
@@ -401,19 +404,19 @@ class TestParserPlotClause:
 
     def test_simple_columns(self):
         """Test PLOT with simple column names."""
-        result = parse("WITH 'data.csv' PLOT price AGAINST time")
+        result = parse("WITH source('data.csv') PLOT price AGAINST time")
         assert result.series[0].y_column.name == "price"
         assert result.series[0].x_column.name == "time"
 
     def test_columns_with_underscores(self):
         """Test PLOT with underscored column names."""
-        result = parse("WITH 'data.csv' PLOT my_column AGAINST other_col")
+        result = parse("WITH source('data.csv') PLOT my_column AGAINST other_col")
         assert result.series[0].y_column.name == "my_column"
         assert result.series[0].x_column.name == "other_col"
 
     def test_default_plot_type_is_scatter(self):
         """Test default plot type is scatter."""
-        result = parse("WITH 'data.csv' PLOT y AGAINST x")
+        result = parse("WITH source('data.csv') PLOT y AGAINST x")
         assert result.series[0].plot_type == PlotType.SCATTER
 
     @pytest.mark.parametrize("plot_type,expected", [
@@ -424,12 +427,12 @@ class TestParserPlotClause:
     ])
     def test_as_plot_types(self, plot_type, expected):
         """Test AS clause with all plot types."""
-        result = parse(f"WITH 'data.csv' PLOT y AGAINST x AS '{plot_type}'")
+        result = parse(f"WITH source('data.csv') PLOT y AGAINST x AS '{plot_type}'")
         assert result.series[0].plot_type == expected
 
     def test_plot_type_case_insensitive(self):
         """Test plot type is case insensitive."""
-        result = parse("WITH 'data.csv' PLOT y AGAINST x AS 'LINE'")
+        result = parse("WITH source('data.csv') PLOT y AGAINST x AS 'LINE'")
         assert result.series[0].plot_type == PlotType.LINE
 
 
@@ -446,25 +449,25 @@ class TestParserAggregation:
     ])
     def test_aggregate_functions(self, func, expected):
         """Test all aggregate functions parse correctly."""
-        result = parse(f"WITH 'data.csv' PLOT {func}(value) AGAINST category")
+        result = parse(f"WITH source('data.csv') PLOT {func}(value) AGAINST category")
         assert result.series[0].y_column.aggregate == expected
         assert result.series[0].y_column.name == "value"
 
     def test_aggregate_in_y_column(self):
         """Test aggregation in y column."""
-        result = parse("WITH 'data.csv' PLOT count(id) AGAINST category")
+        result = parse("WITH source('data.csv') PLOT count(id) AGAINST category")
         assert result.series[0].y_column.is_aggregate
         assert not result.series[0].x_column.is_aggregate
 
     def test_aggregate_in_x_column(self):
         """Test aggregation in x column."""
-        result = parse("WITH 'data.csv' PLOT value AGAINST avg(score)")
+        result = parse("WITH source('data.csv') PLOT value AGAINST avg(score)")
         assert result.series[0].x_column.is_aggregate
         assert not result.series[0].y_column.is_aggregate
 
     def test_query_is_aggregate_property(self):
         """Test PlotQuery.is_aggregate property."""
-        result = parse("WITH 'data.csv' PLOT sum(amount) AGAINST category")
+        result = parse("WITH source('data.csv') PLOT sum(amount) AGAINST category")
         assert result.is_aggregate is True
 
 
@@ -473,7 +476,7 @@ class TestParserFilterClause:
 
     def test_single_condition_equals_number(self):
         """Test FILTER with equals and number."""
-        result = parse("WITH 'data.csv' PLOT y AGAINST x FILTER value = 10")
+        result = parse("WITH source('data.csv') PLOT y AGAINST x FILTER value = 10")
         assert result.series[0].filter is not None
         assert len(result.series[0].filter.conditions) == 1
         assert result.series[0].filter.conditions[0].column == "value"
@@ -482,49 +485,49 @@ class TestParserFilterClause:
 
     def test_single_condition_equals_string(self):
         """Test FILTER with equals and string."""
-        result = parse("WITH 'data.csv' PLOT y AGAINST x FILTER status = 'active'")
+        result = parse("WITH source('data.csv') PLOT y AGAINST x FILTER status = 'active'")
         assert result.series[0].filter.conditions[0].value == "active"
 
     def test_single_condition_greater_than(self):
         """Test FILTER with greater than."""
-        result = parse("WITH 'data.csv' PLOT y AGAINST x FILTER price > 100")
+        result = parse("WITH source('data.csv') PLOT y AGAINST x FILTER price > 100")
         assert result.series[0].filter.conditions[0].op == ComparisonOp.GT
 
     def test_single_condition_less_than(self):
         """Test FILTER with less than."""
-        result = parse("WITH 'data.csv' PLOT y AGAINST x FILTER quantity < 5")
+        result = parse("WITH source('data.csv') PLOT y AGAINST x FILTER quantity < 5")
         assert result.series[0].filter.conditions[0].op == ComparisonOp.LT
 
     def test_single_condition_greater_equals(self):
         """Test FILTER with greater than or equals."""
-        result = parse("WITH 'data.csv' PLOT y AGAINST x FILTER age >= 18")
+        result = parse("WITH source('data.csv') PLOT y AGAINST x FILTER age >= 18")
         assert result.series[0].filter.conditions[0].op == ComparisonOp.GE
 
     def test_single_condition_less_equals(self):
         """Test FILTER with less than or equals."""
-        result = parse("WITH 'data.csv' PLOT y AGAINST x FILTER score <= 100")
+        result = parse("WITH source('data.csv') PLOT y AGAINST x FILTER score <= 100")
         assert result.series[0].filter.conditions[0].op == ComparisonOp.LE
 
     def test_single_condition_not_equals(self):
         """Test FILTER with not equals."""
-        result = parse("WITH 'data.csv' PLOT y AGAINST x FILTER type != 'hidden'")
+        result = parse("WITH source('data.csv') PLOT y AGAINST x FILTER type != 'hidden'")
         assert result.series[0].filter.conditions[0].op == ComparisonOp.NE
 
     def test_two_conditions_and(self):
         """Test FILTER with two conditions and AND."""
-        result = parse("WITH 'data.csv' PLOT y AGAINST x FILTER a = 1 AND b = 2")
+        result = parse("WITH source('data.csv') PLOT y AGAINST x FILTER a = 1 AND b = 2")
         assert len(result.series[0].filter.conditions) == 2
         assert len(result.series[0].filter.operators) == 1
         assert result.series[0].filter.operators[0] == LogicalOp.AND
 
     def test_two_conditions_or(self):
         """Test FILTER with two conditions and OR."""
-        result = parse("WITH 'data.csv' PLOT y AGAINST x FILTER a = 1 OR b = 2")
+        result = parse("WITH source('data.csv') PLOT y AGAINST x FILTER a = 1 OR b = 2")
         assert result.series[0].filter.operators[0] == LogicalOp.OR
 
     def test_three_conditions_mixed(self):
         """Test FILTER with three conditions and mixed operators."""
-        result = parse("WITH 'data.csv' PLOT y AGAINST x FILTER a = 1 AND b = 2 OR c = 3")
+        result = parse("WITH source('data.csv') PLOT y AGAINST x FILTER a = 1 AND b = 2 OR c = 3")
         assert len(result.series[0].filter.conditions) == 3
         assert len(result.series[0].filter.operators) == 2
         assert result.series[0].filter.operators[0] == LogicalOp.AND
@@ -532,17 +535,17 @@ class TestParserFilterClause:
 
     def test_filter_with_float(self):
         """Test FILTER with float value."""
-        result = parse("WITH 'data.csv' PLOT y AGAINST x FILTER price > 99.99")
+        result = parse("WITH source('data.csv') PLOT y AGAINST x FILTER price > 99.99")
         assert result.series[0].filter.conditions[0].value == 99.99
 
     def test_filter_with_negative_number(self):
         """Test FILTER with negative number."""
-        result = parse("WITH 'data.csv' PLOT y AGAINST x FILTER delta < -10")
+        result = parse("WITH source('data.csv') PLOT y AGAINST x FILTER delta < -10")
         assert result.series[0].filter.conditions[0].value == -10
 
     def test_filter_with_identifier_value(self):
         """Test FILTER with identifier as value."""
-        result = parse("WITH 'data.csv' PLOT y AGAINST x FILTER type = active")
+        result = parse("WITH source('data.csv') PLOT y AGAINST x FILTER type = active")
         assert result.series[0].filter.conditions[0].value == "active"
 
 
@@ -551,68 +554,68 @@ class TestParserFormatClause:
 
     def test_format_title(self):
         """Test FORMAT with title."""
-        result = parse("WITH 'data.csv' PLOT y AGAINST x FORMAT title = 'My Plot'")
+        result = parse("WITH source('data.csv') PLOT y AGAINST x FORMAT title = 'My Plot'")
         assert result.series[0].format.title == "My Plot"
 
     def test_format_xlabel(self):
         """Test FORMAT with xlabel."""
-        result = parse("WITH 'data.csv' PLOT y AGAINST x FORMAT xlabel = 'X Axis'")
+        result = parse("WITH source('data.csv') PLOT y AGAINST x FORMAT xlabel = 'X Axis'")
         assert result.series[0].format.xlabel == "X Axis"
 
     def test_format_ylabel(self):
         """Test FORMAT with ylabel."""
-        result = parse("WITH 'data.csv' PLOT y AGAINST x FORMAT ylabel = 'Y Axis'")
+        result = parse("WITH source('data.csv') PLOT y AGAINST x FORMAT ylabel = 'Y Axis'")
         assert result.series[0].format.ylabel == "Y Axis"
 
     def test_format_marker_size(self):
         """Test FORMAT with marker_size."""
-        result = parse("WITH 'data.csv' PLOT y AGAINST x FORMAT marker_size = 3")
+        result = parse("WITH source('data.csv') PLOT y AGAINST x FORMAT marker_size = 3")
         assert result.series[0].format.marker_size == "3"
 
     def test_format_marker_size_alias(self):
         """Test FORMAT with size alias."""
-        result = parse("WITH 'data.csv' PLOT y AGAINST x FORMAT size = 2")
+        result = parse("WITH source('data.csv') PLOT y AGAINST x FORMAT size = 2")
         assert result.series[0].format.marker_size == "2"
 
     def test_format_marker_color(self):
         """Test FORMAT with marker_color."""
-        result = parse("WITH 'data.csv' PLOT y AGAINST x FORMAT marker_color = blue")
+        result = parse("WITH source('data.csv') PLOT y AGAINST x FORMAT marker_color = blue")
         assert result.series[0].format.marker_color == "blue"
 
     def test_format_marker_colour_alias(self):
         """Test FORMAT with British spelling."""
-        result = parse("WITH 'data.csv' PLOT y AGAINST x FORMAT marker_colour = red")
+        result = parse("WITH source('data.csv') PLOT y AGAINST x FORMAT marker_colour = red")
         assert result.series[0].format.marker_color == "red"
 
     def test_format_line_color(self):
         """Test FORMAT with line_color."""
-        result = parse("WITH 'data.csv' PLOT y AGAINST x FORMAT line_color = green")
+        result = parse("WITH source('data.csv') PLOT y AGAINST x FORMAT line_color = green")
         assert result.series[0].format.line_color == "green"
 
     def test_format_color_alias(self):
         """Test FORMAT with color alias."""
-        result = parse("WITH 'data.csv' PLOT y AGAINST x FORMAT color = yellow")
+        result = parse("WITH source('data.csv') PLOT y AGAINST x FORMAT color = yellow")
         assert result.series[0].format.line_color == "yellow"
 
     def test_format_line_style(self):
         """Test FORMAT with line_style."""
-        result = parse("WITH 'data.csv' PLOT y AGAINST x FORMAT line_style = dashed")
+        result = parse("WITH source('data.csv') PLOT y AGAINST x FORMAT line_style = dashed")
         assert result.series[0].format.line_style == "dashed"
 
     def test_format_style_alias(self):
         """Test FORMAT with style alias."""
-        result = parse("WITH 'data.csv' PLOT y AGAINST x FORMAT style = dotted")
+        result = parse("WITH source('data.csv') PLOT y AGAINST x FORMAT style = dotted")
         assert result.series[0].format.line_style == "dotted"
 
     def test_format_marker_null(self):
         """Test FORMAT with marker = NULL."""
-        result = parse("WITH 'data.csv' PLOT y AGAINST x FORMAT marker = NULL")
+        result = parse("WITH source('data.csv') PLOT y AGAINST x FORMAT marker = NULL")
         assert result.series[0].format.marker is None
 
     def test_format_multiple_options(self):
         """Test FORMAT with multiple options."""
         result = parse(
-            "WITH 'data.csv' PLOT y AGAINST x "
+            "WITH source('data.csv') PLOT y AGAINST x "
             "FORMAT title = 'Plot' AND xlabel = 'X' AND ylabel = 'Y'"
         )
         assert result.series[0].format.title == "Plot"
@@ -621,7 +624,7 @@ class TestParserFormatClause:
 
     def test_format_column_reference(self):
         """Test FORMAT with column reference as value."""
-        result = parse("WITH 'data.csv' PLOT y AGAINST x FORMAT marker_color = category")
+        result = parse("WITH source('data.csv') PLOT y AGAINST x FORMAT marker_color = category")
         assert result.series[0].format.marker_color == "category"
 
 
@@ -631,14 +634,14 @@ class TestParserCompleteQueries:
     def test_full_query(self):
         """Test parsing a full query with all clauses."""
         query = (
-            "WITH 'trades.csv' "
+            "WITH source('trades.csv') "
             "PLOT sum(amount) AGAINST category AS 'bar' "
             "FILTER status = 'active' AND value > 100 "
             "FORMAT title = 'Sales' AND ylabel = 'Amount'"
         )
         result = parse(query)
 
-        assert result.source.path == "trades.csv"
+        assert result.source.args[0] == "trades.csv"
         assert result.series[0].y_column.aggregate == AggregateFunc.SUM
         assert result.series[0].x_column.name == "category"
         assert result.series[0].plot_type == PlotType.BAR
@@ -648,14 +651,14 @@ class TestParserCompleteQueries:
     def test_multiline_query(self):
         """Test parsing a multiline query."""
         query = """
-        WITH 'data.csv'
+        WITH source('data.csv')
         PLOT y AGAINST x AS 'line'
         FILTER value > 0
         FORMAT title = 'Chart'
         """
         result = parse(query)
 
-        assert result.source.path == "data.csv"
+        assert result.source.args[0] == "data.csv"
         assert result.series[0].plot_type == PlotType.LINE
         assert result.series[0].filter is not None
         assert result.series[0].format.title == "Chart"
@@ -670,53 +673,53 @@ class TestParserErrors:
             parse("PLOT y AGAINST x")
         assert "Expected WITH" in str(exc_info.value)
 
-    def test_missing_file_after_with(self):
-        """Test error when file path is missing after WITH."""
+    def test_missing_source_after_with(self):
+        """Test error when source() is missing after WITH."""
         with pytest.raises(ParseError) as exc_info:
             parse("WITH PLOT y AGAINST x")
-        # Error can be about STRING or connector function
-        assert "file path" in str(exc_info.value).lower() or "connector" in str(exc_info.value).lower()
+        # Error should mention SOURCE
+        assert "source" in str(exc_info.value).lower()
 
     def test_missing_plot(self):
         """Test error when PLOT is missing."""
         with pytest.raises(ParseError) as exc_info:
-            parse("WITH 'data.csv'")
+            parse("WITH source('data.csv')")
         assert "PLOT" in str(exc_info.value)
 
     def test_missing_against(self):
         """Test error when AGAINST is missing."""
         with pytest.raises(ParseError) as exc_info:
-            parse("WITH 'data.csv' PLOT y x")
+            parse("WITH source('data.csv') PLOT y x")
         assert "Expected AGAINST" in str(exc_info.value)
 
     def test_invalid_plot_type(self):
         """Test error for invalid plot type."""
         with pytest.raises(ParseError) as exc_info:
-            parse("WITH 'data.csv' PLOT y AGAINST x AS 'invalid'")
+            parse("WITH source('data.csv') PLOT y AGAINST x AS 'invalid'")
         assert "Unknown plot type" in str(exc_info.value)
 
     def test_unexpected_token_at_end(self):
         """Test error for unexpected token at end."""
         with pytest.raises(ParseError) as exc_info:
-            parse("WITH 'data.csv' PLOT y AGAINST x EXTRA")
+            parse("WITH source('data.csv') PLOT y AGAINST x EXTRA")
         assert "Unexpected token" in str(exc_info.value)
 
     def test_missing_closing_paren_in_aggregate(self):
         """Test error for missing closing paren in aggregate."""
         with pytest.raises(ParseError) as exc_info:
-            parse("WITH 'data.csv' PLOT count(x AGAINST y")
+            parse("WITH source('data.csv') PLOT count(x AGAINST y")
         assert "Expected RPAREN" in str(exc_info.value)
 
     def test_missing_value_after_filter_operator(self):
         """Test error when value is missing after filter operator."""
         with pytest.raises(ParseError) as exc_info:
-            parse("WITH 'data.csv' PLOT y AGAINST x FILTER value >")
+            parse("WITH source('data.csv') PLOT y AGAINST x FILTER value >")
         assert "Expected value" in str(exc_info.value)
 
     def test_missing_value_after_format_equals(self):
         """Test error when value is missing after FORMAT =."""
         with pytest.raises(ParseError) as exc_info:
-            parse("WITH 'data.csv' PLOT y AGAINST x FORMAT title =")
+            parse("WITH source('data.csv') PLOT y AGAINST x FORMAT title =")
         assert "Expected value" in str(exc_info.value)
 
 
@@ -725,31 +728,31 @@ class TestParserEdgeCases:
 
     def test_extra_whitespace(self):
         """Test query with extra whitespace."""
-        query = "WITH   'data.csv'   PLOT   y   AGAINST   x"
+        query = "WITH   source( 'data.csv' )   PLOT   y   AGAINST   x"
         result = parse(query)
-        assert result.source.path == "data.csv"
+        assert result.source.args[0] == "data.csv"
 
     def test_tabs_in_query(self):
         """Test query with tabs."""
-        query = "WITH\t'data.csv'\tPLOT\ty\tAGAINST\tx"
+        query = "WITH\tsource('data.csv')\tPLOT\ty\tAGAINST\tx"
         result = parse(query)
-        assert result.source.path == "data.csv"
+        assert result.source.args[0] == "data.csv"
 
     def test_newlines_in_query(self):
         """Test query with newlines."""
-        query = "WITH\n'data.csv'\nPLOT\ny\nAGAINST\nx"
+        query = "WITH\nsource('data.csv')\nPLOT\ny\nAGAINST\nx"
         result = parse(query)
-        assert result.source.path == "data.csv"
+        assert result.source.args[0] == "data.csv"
 
     def test_integer_converted_properly(self):
         """Test integer values are converted to int."""
-        result = parse("WITH 'data.csv' PLOT y AGAINST x FILTER value = 10")
+        result = parse("WITH source('data.csv') PLOT y AGAINST x FILTER value = 10")
         assert result.series[0].filter.conditions[0].value == 10
         assert isinstance(result.series[0].filter.conditions[0].value, int)
 
     def test_float_kept_as_float(self):
         """Test float values are kept as float."""
-        result = parse("WITH 'data.csv' PLOT y AGAINST x FILTER value = 10.5")
+        result = parse("WITH source('data.csv') PLOT y AGAINST x FILTER value = 10.5")
         assert result.series[0].filter.conditions[0].value == 10.5
         assert isinstance(result.series[0].filter.conditions[0].value, float)
 
@@ -835,13 +838,13 @@ class TestParserMultipleSeries:
     def test_two_plot_clauses_basic(self):
         """Test parsing query with two PLOT clauses."""
         query = """
-        WITH 'data.csv'
+        WITH source('data.csv')
         PLOT price AGAINST time
         PLOT volume AGAINST time
         """
         result = parse(query)
 
-        assert result.source.path == "data.csv"
+        assert result.source.args[0] == "data.csv"
         assert len(result.series) == 2
         assert result.series[0].y_column.name == "price"
         assert result.series[0].x_column.name == "time"
@@ -851,7 +854,7 @@ class TestParserMultipleSeries:
     def test_second_plot_with_filter(self):
         """Test that FILTER applies to the preceding PLOT clause."""
         query = """
-        WITH 'data.csv'
+        WITH source('data.csv')
         PLOT price AGAINST time
         PLOT price AGAINST time
             FILTER user_id = 'foo'
@@ -867,7 +870,7 @@ class TestParserMultipleSeries:
     def test_second_plot_with_format(self):
         """Test that FORMAT applies to the preceding PLOT clause."""
         query = """
-        WITH 'data.csv'
+        WITH source('data.csv')
         PLOT price AGAINST time
         PLOT price AGAINST time
             FORMAT marker_size = 5
@@ -881,7 +884,7 @@ class TestParserMultipleSeries:
     def test_second_plot_with_filter_and_format(self):
         """Test PLOT with both FILTER and FORMAT."""
         query = """
-        WITH 'data.csv'
+        WITH source('data.csv')
         PLOT price AGAINST time
         PLOT price AGAINST time
             FILTER user_id = 'foo'
@@ -896,7 +899,7 @@ class TestParserMultipleSeries:
     def test_multiple_series_with_plot_types(self):
         """Test multiple PLOT clauses with AS type declarations."""
         query = """
-        WITH 'data.csv'
+        WITH source('data.csv')
         PLOT price AGAINST time AS 'line'
         PLOT volume AGAINST time AS 'scatter'
         """
@@ -909,7 +912,7 @@ class TestParserMultipleSeries:
     def test_three_plot_clauses(self):
         """Test parsing query with three PLOT clauses."""
         query = """
-        WITH 'data.csv'
+        WITH source('data.csv')
         PLOT a AGAINST x
         PLOT b AGAINST x
         PLOT c AGAINST x
@@ -924,7 +927,7 @@ class TestParserMultipleSeries:
     def test_first_series_with_filter_format(self):
         """Test first PLOT clause can have FILTER and FORMAT too."""
         query = """
-        WITH 'data.csv'
+        WITH source('data.csv')
         PLOT price AGAINST time
             FILTER category = 'A'
             FORMAT marker_color = 'blue'
@@ -943,7 +946,7 @@ class TestParserMultipleSeries:
     def test_mixed_aggregated_and_raw(self):
         """Test mixing aggregated and non-aggregated series."""
         query = """
-        WITH 'data.csv'
+        WITH source('data.csv')
         PLOT count(id) AGAINST category AS 'bar'
         PLOT avg(value) AGAINST category AS 'line'
         """
@@ -957,7 +960,7 @@ class TestParserMultipleSeries:
 
     def test_backward_compatible_single_plot(self):
         """Test that single PLOT queries still work (backward compatibility)."""
-        query = "WITH 'data.csv' PLOT y AGAINST x"
+        query = "WITH source('data.csv') PLOT y AGAINST x"
         result = parse(query)
 
         # Should have exactly one series
@@ -967,7 +970,7 @@ class TestParserMultipleSeries:
 
     def test_backward_compatible_with_filter_format(self):
         """Test backward compatibility with FILTER and FORMAT."""
-        query = "WITH 'data.csv' PLOT y AGAINST x FILTER a = 1 FORMAT title = 'Test'"
+        query = "WITH source('data.csv') PLOT y AGAINST x FILTER a = 1 FORMAT title = 'Test'"
         result = parse(query)
 
         assert len(result.series) == 1
@@ -977,7 +980,7 @@ class TestParserMultipleSeries:
     def test_example_from_todo(self):
         """Test the exact example from the todo.md."""
         query = """
-        WITH 'example/trades.csv'
+        WITH source('example/trades.csv')
         PLOT
             price AGAINST received_at
         PLOT
@@ -987,7 +990,7 @@ class TestParserMultipleSeries:
         """
         result = parse(query)
 
-        assert result.source.path == "example/trades.csv"
+        assert result.source.args[0] == "example/trades.csv"
         assert len(result.series) == 2
 
         # First series: all data, no filter/format

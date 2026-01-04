@@ -15,12 +15,14 @@ from plotql.core.connectors.base import (
 )
 from plotql.core.connectors.literal import LiteralConnector
 from plotql.core.connectors.file import FileConnector
+from plotql.core.connectors.folder import FolderConnector
 from plotql.core.connectors.clickhouse import ClickHouseConnector
 
 
 # Registry of available connector types
 CONNECTORS: dict[str, Type[Connector]] = {
     "file": FileConnector,
+    "folder": FolderConnector,
     "clickhouse": ClickHouseConnector,
 }
 
@@ -57,6 +59,7 @@ __all__ = [
     # Implementations
     "LiteralConnector",
     "FileConnector",
+    "FolderConnector",
     "ClickHouseConnector",
     # Registry
     "CONNECTORS",

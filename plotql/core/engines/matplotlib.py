@@ -141,42 +141,26 @@ class MatplotlibEngine(Engine):
         ax.set_title(title, fontsize=TITLE_SIZE, color=self._COLORS["text"], pad=10)
 
         # Limit x-axis ticks to max 5 for cleaner look
-        ax.xaxis.set_major_locator(plt.MaxNLocator(nbins=5))
         ax.yaxis.set_major_locator(plt.MaxNLocator(nbins=6))
 
-        # Format tick labels for datetime display
-        def truncate_label(text, max_len=16):
-            """Format datetime labels to show date and time (HH:MM)."""
-            text = str(text)
-            # For timestamps with date and time, format as "YYYY-MM-DD HH:MM"
-            if ' ' in text and ':' in text:
-                parts = text.split(' ')
-                if len(parts) >= 2:
-                    date_part = parts[0]
-                    time_part = parts[1].split('.')[0]  # Remove microseconds
-                    time_parts = time_part.split(':')
-                    if len(time_parts) >= 2:
-                        text = f"{date_part} {time_parts[0]}:{time_parts[1]}"
-            # Handle ISO format with T separator
-            elif 'T' in text and ':' in text:
-                parts = text.split('T')
-                if len(parts) >= 2:
-                    date_part = parts[0]
-                    time_part = parts[1].split('.')[0]  # Remove microseconds
-                    time_parts = time_part.split(':')
-                    if len(time_parts) >= 2:
-                        text = f"{date_part} {time_parts[0]}:{time_parts[1]}"
-            # Truncate if still too long
-            if len(text) > max_len:
-                text = text[:max_len - 1] + "..."
-            return text
+        # Check if x-axis contains datetime values and format accordingly
+        from datetime import datetime
+        first_data = data_list[0] if data_list else None
+        has_datetime_x = (
+            first_data is not None
+            and first_data.x
+            and isinstance(first_data.x[0], datetime)
+        )
 
-        # Apply formatting after drawing
-        fig.canvas.draw()
-        x_labels = ax.get_xticklabels()
-        if x_labels:
-            new_labels = [truncate_label(label.get_text()) for label in x_labels]
-            ax.set_xticklabels(new_labels, rotation=0, ha='center')
+        if has_datetime_x:
+            # Use DateFormatter for datetime x-axis with limited ticks
+            import matplotlib.dates as mdates
+            ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d %H:%M'))
+            ax.xaxis.set_major_locator(mdates.AutoDateLocator(maxticks=5))
+            # Rotate labels for readability
+            plt.setp(ax.get_xticklabels(), rotation=0, ha='right')
+        else:
+            ax.xaxis.set_major_locator(plt.MaxNLocator(nbins=5))
 
         # Layout with proper margins to prevent overflow
         fig.tight_layout(pad=1.5)
