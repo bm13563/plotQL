@@ -29,9 +29,14 @@ from io import BytesIO
 from plotql.ui.autocomplete import AutoCompleter
 from plotql.ui.config_editor import ConfigEditorScreen
 from plotql.ui.state import get_last_query, save_last_query
-from plotql.core.engines import get_engine
-from plotql.core.executor import ExecutionError, PlotData, execute
-from plotql.core.parser import ParseError, parse
+from plotql.core import (
+    execute,
+    get_engine,
+    parse,
+    ExecutionError,
+    ParseError,
+    PlotData,
+)
 from plotql.themes import THEME
 
 # Build TextArea theme from centralized theme

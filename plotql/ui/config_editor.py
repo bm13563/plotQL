@@ -13,7 +13,7 @@ from textual.containers import Vertical
 from textual.screen import Screen
 from textual.widgets import Footer, Header, Static, TextArea
 
-from plotql.core.config import CONFIG_PATH
+from plotql.core import CONFIG_PATH
 
 
 DEFAULT_CONFIG = '''# PlotQL Connector Configuration

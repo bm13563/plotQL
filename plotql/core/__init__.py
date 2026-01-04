@@ -30,6 +30,7 @@ from plotql.core.ast import (
     PlotType,
     WhereClause,
 )
+from plotql.core.config import CONFIG_PATH
 from plotql.core.executor import execute, ExecutionError, PlotData
 from plotql.core.parser import parse, ParseError
 from plotql.core.result import PlotResult
@@ -85,4 +86,6 @@ __all__ = [
     "set_engine",
     "Engine",
     "MatplotlibEngine",
+    # Configuration
+    "CONFIG_PATH",
 ]
