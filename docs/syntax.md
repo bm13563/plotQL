@@ -56,18 +56,18 @@ WITH source(local_data, 2024, jan, trades.csv) PLOT price AGAINST time
 
 ## Plot Types
 
-Specify with `AS '<type>'` (quotes optional):
+Specify with `AS '<type>'`:
 
 | Type | Description |
 |------|-------------|
-| `scatter` | Scatter plot (default) |
-| `line` | Line chart |
-| `bar` | Bar chart |
-| `hist` | Histogram |
+| `'scatter'` | Scatter plot (default) |
+| `'line'` | Line chart |
+| `'bar'` | Bar chart |
+| `'hist'` | Histogram |
 
 ```sql
-WITH 'data.csv' PLOT price AGAINST time AS line
-WITH 'data.csv' PLOT count AGAINST category AS bar
+WITH 'data.csv' PLOT price AGAINST time AS 'line'
+WITH 'data.csv' PLOT count AGAINST category AS 'bar'
 ```
 
 ## Columns
@@ -96,13 +96,13 @@ Apply aggregate functions:
 
 ```sql
 -- Total sales per region
-WITH 'orders.csv' PLOT sum(amount) AGAINST region AS bar
+WITH 'orders.csv' PLOT sum(amount) AGAINST region AS 'bar'
 
 -- Average price over time
-WITH 'stocks.csv' PLOT avg(price) AGAINST date AS line
+WITH 'stocks.csv' PLOT avg(price) AGAINST date AS 'line'
 
 -- Count events per hour
-WITH 'logs.csv' PLOT count(event) AGAINST hour AS bar
+WITH 'logs.csv' PLOT count(event) AGAINST hour AS 'bar'
 ```
 
 When using aggregations, data is automatically grouped by the non-aggregated column.
@@ -171,11 +171,11 @@ FORMAT title = 'Price Over Time' AND xlabel = 'Date' AND ylabel = 'USD'
 
 ```sql
 -- Line color
-WITH 'data.csv' PLOT price AGAINST time AS line
+WITH 'data.csv' PLOT price AGAINST time AS 'line'
 FORMAT line_color = 'red'
 
 -- Marker color for scatter
-WITH 'data.csv' PLOT price AGAINST time AS scatter
+WITH 'data.csv' PLOT price AGAINST time AS 'scatter'
 FORMAT marker_color = 'blue'
 ```
 
@@ -187,15 +187,15 @@ Map visual properties to column values:
 
 ```sql
 -- Color by category (categorical)
-WITH 'data.csv' PLOT price AGAINST time AS scatter
+WITH 'data.csv' PLOT price AGAINST time AS 'scatter'
 FORMAT marker_color = category
 
 -- Size by value (continuous)
-WITH 'data.csv' PLOT price AGAINST time AS scatter
+WITH 'data.csv' PLOT price AGAINST time AS 'scatter'
 FORMAT marker_size = volume
 
 -- Both color and size
-WITH 'data.csv' PLOT price AGAINST time AS scatter
+WITH 'data.csv' PLOT price AGAINST time AS 'scatter'
 FORMAT marker_color = sector AND marker_size = market_cap
 ```
 
@@ -230,8 +230,8 @@ PLOT price AGAINST time
 
 -- Compare metrics
 WITH 'stocks.csv'
-PLOT open AGAINST date AS line
-PLOT close AGAINST date AS line
+PLOT open AGAINST date AS 'line'
+PLOT close AGAINST date AS 'line'
     FORMAT line_color = 'red'
 ```
 
@@ -386,8 +386,8 @@ from plotql.core import parse, execute, render
 # Multi-series plot with filtering and formatting
 query = parse("""
     WITH 'trades.csv'
-    PLOT price AGAINST timestamp AS scatter
-    PLOT price AGAINST timestamp AS scatter
+    PLOT price AGAINST timestamp AS 'scatter'
+    PLOT price AGAINST timestamp AS 'scatter'
         FILTER symbol = 'AAPL'
         FORMAT marker_color = 'red' AND marker_size = 4
 """)

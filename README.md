@@ -4,33 +4,40 @@ A SQL-like query language for creating plots. No Python boilerplate, no remember
 
 ![PlotQL TUI](examples/tui_screenshot.png)
 
-## Why PlotQL?
+## Quick Start
 
-Data visualization shouldn't require hunting through documentation or writing boilerplate. PlotQL lets you express plots declaratively:
+The easiest way to use PlotQL is through the interactive TUI:
+
+```bash
+# Setup (requires uv)
+git clone https://github.com/your-username/plotql.git
+cd plotql && ./ctl.sh setup
+source .venv/bin/activate
+
+# Launch the TUI
+plotql
+```
+
+Write queries like:
 
 ```sql
-WITH 'trades.csv' PLOT price AGAINST time AS line
+WITH 'trades.csv' PLOT price AGAINST time AS 'line'
 FILTER symbol = 'AAPL' AND volume > 1000
 FORMAT title = 'AAPL Price'
 ```
 
-### Design Philosophy
+Press `F5` to execute. See [TUI documentation](docs/ui.md) for keyboard shortcuts and features.
 
-**The core library is completely independent of any UI.** PlotQL's parsing and rendering engine is a standalone Python library that can be embedded anywhere:
+If you don't have `uv`, install it from [astral.sh/uv](https://docs.astral.sh/uv/getting-started/installation/).
 
-- **Scripts** — parse queries and save plots programmatically
-- **Jupyter notebooks** — inline display with `result.show()`
-- **Web applications** — render to bytes and serve
-- **The included TUI** — interactive terminal interface (just one possible frontend)
+## Python API
 
-This separation means you can use PlotQL's query language in whatever context makes sense for your workflow.
-
-## Quick Example
+PlotQL's core is a standalone library, independent of the TUI. Use it in scripts, Jupyter notebooks, or embed it in your own applications:
 
 ```python
 from plotql.core import parse, execute, render
 
-query = parse("WITH 'data.csv' PLOT revenue AGAINST month AS bar")
+query = parse("WITH 'data.csv' PLOT revenue AGAINST month AS 'bar'")
 data = execute(query)
 result = render(data)
 
@@ -39,22 +46,7 @@ result.show()                # Display in Jupyter
 result.figure                # Access matplotlib figure for customization
 ```
 
-## Installation
-
-```bash
-# Clone and setup (requires uv)
-git clone https://github.com/your-username/plotql.git
-cd plotql
-./ctl.sh setup
-
-# Activate environment
-source .venv/bin/activate
-
-# Run the TUI
-plotql
-```
-
-If you don't have `uv`, install it from [astral.sh/uv](https://docs.astral.sh/uv/getting-started/installation/).
+This separation means you can use PlotQL's query language in whatever context makes sense for your workflow.
 
 ## Documentation
 
