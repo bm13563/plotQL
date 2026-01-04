@@ -2,7 +2,7 @@
 
 A SQL-like query language for creating plots. No Python boilerplate, no remembering matplotlib syntax — just describe what you want to plot.
 
-![PlotQL TUI](examples/tui_screenshot.png)
+![PlotQL TUI](docs/tui_screenshot.png)
 
 ## Quick Start
 
@@ -21,9 +21,9 @@ plotql
 Write queries like:
 
 ```sql
-WITH 'trades.csv' PLOT price AGAINST time AS 'line'
-FILTER symbol = 'AAPL' AND volume > 1000
-FORMAT title = 'AAPL Price'
+WITH source('docs/example.csv')
+    PLOT price AGAINST received_at AS 'line'
+    FORMAT color = 'peach'
 ```
 
 Press `F5` to execute. See [TUI documentation](docs/ui.md) for keyboard shortcuts and features.

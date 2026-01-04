@@ -1,4 +1,0 @@
-WITH 'examples/trades.csv'
-PLOT price AGAINST timestamp AS line
-WHERE symbol = 'AAPL'
-OPTIONS title = 'AAPL Price', color = green
