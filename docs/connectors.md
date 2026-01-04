@@ -8,7 +8,7 @@ Data sources are specified in the `WITH` clause:
 
 ```sql
 -- Literal file path
-WITH 'data.csv' PLOT y AGAINST x
+WITH source('data.csv') PLOT y AGAINST x
 
 -- Named source from config
 WITH source(trades) PLOT y AGAINST x
@@ -51,8 +51,8 @@ limit = 10000
 Direct file paths without configuration:
 
 ```sql
-WITH 'path/to/file.csv' PLOT price AGAINST time
-WITH '/absolute/path/data.parquet' PLOT price AGAINST time
+WITH source('path/to/file.csv') PLOT price AGAINST time
+WITH source('/absolute/path/data.parquet') PLOT price AGAINST time
 ```
 
 Supported formats:
@@ -151,7 +151,7 @@ This minimizes data transfer by filtering at the database level.
 
 ## How Connectors Work
 
-1. **Literal paths** (quoted strings): Routed to LiteralConnector
+1. **Literal paths** `source('path.csv')`: Routed to LiteralConnector
 2. **Single argument** `source(alias)`: Looks up config, routes based on `type`
 3. **Multiple arguments** `source(alias, ...)`:
    - For `clickhouse`: Second arg is table name

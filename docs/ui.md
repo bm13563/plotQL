@@ -17,7 +17,7 @@ PlotQL includes an interactive terminal interface built with [Textual](https://t
 plotql
 
 # Execute a query directly
-plotql -c "WITH 'data.csv' PLOT price AGAINST time"
+plotql -c "WITH source('data.csv') PLOT price AGAINST time"
 
 # Run a .pql file
 plotql query.pql

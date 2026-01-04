@@ -41,7 +41,7 @@ Features:
 ```python
 from plotql.core import parse, execute, render
 
-data = execute(parse("WITH 'data.csv' PLOT y AGAINST x"))
+data = execute(parse("WITH source('data.csv') PLOT y AGAINST x"))
 result = render(data)  # Uses default engine
 ```
 
@@ -50,7 +50,7 @@ result = render(data)  # Uses default engine
 ```python
 from plotql.core import parse, execute, get_engine
 
-query = parse("WITH 'data.csv' PLOT y AGAINST x")
+query = parse("WITH source('data.csv') PLOT y AGAINST x")
 data = execute(query)
 
 engine = get_engine()

@@ -19,11 +19,11 @@ Multiple `PLOT` clauses can be added to layer series on the same chart.
 
 ### Literal File Paths
 
-Reference files directly with quoted strings:
+Reference files directly with quoted strings inside `source()`:
 
 ```sql
-WITH 'data.csv' PLOT price AGAINST time
-WITH '/path/to/trades.parquet' PLOT volume AGAINST timestamp
+WITH source('data.csv') PLOT price AGAINST time
+WITH source('/path/to/trades.parquet') PLOT volume AGAINST timestamp
 ```
 
 Supported formats: CSV, Parquet, JSON, NDJSON
@@ -66,8 +66,8 @@ Specify with `AS '<type>'`:
 | `'hist'` | Histogram |
 
 ```sql
-WITH 'data.csv' PLOT price AGAINST time AS 'line'
-WITH 'data.csv' PLOT count AGAINST category AS 'bar'
+WITH source('data.csv') PLOT price AGAINST time AS 'line'
+WITH source('data.csv') PLOT count AGAINST category AS 'bar'
 ```
 
 ## Columns
@@ -96,13 +96,13 @@ Apply aggregate functions:
 
 ```sql
 -- Total sales per region
-WITH 'orders.csv' PLOT sum(amount) AGAINST region AS 'bar'
+WITH source('orders.csv') PLOT sum(amount) AGAINST region AS 'bar'
 
 -- Average price over time
-WITH 'stocks.csv' PLOT avg(price) AGAINST date AS 'line'
+WITH source('stocks.csv') PLOT avg(price) AGAINST date AS 'line'
 
 -- Count events per hour
-WITH 'logs.csv' PLOT count(event) AGAINST hour AS 'bar'
+WITH source('logs.csv') PLOT count(event) AGAINST hour AS 'bar'
 ```
 
 When using aggregations, data is automatically grouped by the non-aggregated column.
@@ -128,19 +128,19 @@ Combine conditions with `AND` and `OR`:
 
 ```sql
 -- Single condition
-WITH 'trades.csv' PLOT price AGAINST time
+WITH source('trades.csv') PLOT price AGAINST time
 FILTER symbol = 'AAPL'
 
 -- Multiple conditions with AND
-WITH 'trades.csv' PLOT price AGAINST time
+WITH source('trades.csv') PLOT price AGAINST time
 FILTER symbol = 'AAPL' AND volume > 1000
 
 -- OR conditions
-WITH 'sensors.csv' PLOT temperature AGAINST time
+WITH source('sensors.csv') PLOT temperature AGAINST time
 FILTER location = 'warehouse' OR location = 'office'
 
 -- Complex combinations
-WITH 'trades.csv' PLOT price AGAINST time
+WITH source('trades.csv') PLOT price AGAINST time
 FILTER symbol = 'AAPL' AND volume > 1000 OR symbol = 'GOOGL'
 ```
 
@@ -157,7 +157,7 @@ Use `FORMAT` to customize appearance:
 ### Chart Labels
 
 ```sql
-WITH 'data.csv' PLOT price AGAINST time
+WITH source('data.csv') PLOT price AGAINST time
 FORMAT title = 'Price Over Time' AND xlabel = 'Date' AND ylabel = 'USD'
 ```
 
@@ -171,11 +171,11 @@ FORMAT title = 'Price Over Time' AND xlabel = 'Date' AND ylabel = 'USD'
 
 ```sql
 -- Line color
-WITH 'data.csv' PLOT price AGAINST time AS 'line'
+WITH source('data.csv') PLOT price AGAINST time AS 'line'
 FORMAT line_color = 'red'
 
 -- Marker color for scatter
-WITH 'data.csv' PLOT price AGAINST time AS 'scatter'
+WITH source('data.csv') PLOT price AGAINST time AS 'scatter'
 FORMAT marker_color = 'blue'
 ```
 
@@ -187,15 +187,15 @@ Map visual properties to column values:
 
 ```sql
 -- Color by category (categorical)
-WITH 'data.csv' PLOT price AGAINST time AS 'scatter'
+WITH source('data.csv') PLOT price AGAINST time AS 'scatter'
 FORMAT marker_color = category
 
 -- Size by value (continuous)
-WITH 'data.csv' PLOT price AGAINST time AS 'scatter'
+WITH source('data.csv') PLOT price AGAINST time AS 'scatter'
 FORMAT marker_size = volume
 
 -- Both color and size
-WITH 'data.csv' PLOT price AGAINST time AS 'scatter'
+WITH source('data.csv') PLOT price AGAINST time AS 'scatter'
 FORMAT marker_color = sector AND marker_size = market_cap
 ```
 
@@ -222,14 +222,14 @@ Layer multiple plots on the same chart:
 
 ```sql
 -- Overlay filtered subset
-WITH 'trades.csv'
+WITH source('trades.csv')
 PLOT price AGAINST time
 PLOT price AGAINST time
     FILTER user_id = 'vip'
     FORMAT marker_size = 5 AND marker_color = 'red'
 
 -- Compare metrics
-WITH 'stocks.csv'
+WITH source('stocks.csv')
 PLOT open AGAINST date AS 'line'
 PLOT close AGAINST date AS 'line'
     FORMAT line_color = 'red'
@@ -247,7 +247,7 @@ Later series render on top of earlier ones. Each `PLOT` clause can have its own 
 from plotql.core import parse, execute, render
 
 # Parse a query string into an AST
-query = parse("WITH 'data.csv' PLOT price AGAINST time")
+query = parse("WITH source('data.csv') PLOT price AGAINST time")
 
 # Execute the query to get plot data
 data = execute(query)
@@ -295,7 +295,7 @@ PlotResult automatically displays in Jupyter notebooks:
 from plotql.core import parse, execute, render
 
 # Just return the result - displays inline
-render(execute(parse("WITH 'data.csv' PLOT y AGAINST x")))
+render(execute(parse("WITH source('data.csv') PLOT y AGAINST x")))
 ```
 
 ## Render Options
@@ -385,7 +385,7 @@ from plotql.core import parse, execute, render
 
 # Multi-series plot with filtering and formatting
 query = parse("""
-    WITH 'trades.csv'
+    WITH source('trades.csv')
     PLOT price AGAINST timestamp AS 'scatter'
     PLOT price AGAINST timestamp AS 'scatter'
         FILTER symbol = 'AAPL'
