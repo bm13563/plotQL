@@ -361,50 +361,51 @@ class TestParserSourceSyntax:
         assert result.source.args == ["data.csv"]
 
     def test_parse_source_alias(self):
-        """Test parsing source(alias) syntax."""
-        result = parse("WITH source(trades) PLOT price AGAINST time")
+        """Test parsing source('alias') syntax."""
+        result = parse("WITH source('trades') PLOT price AGAINST time")
         assert isinstance(result.source, SourceRef)
-        assert result.source.is_literal is False
-        assert result.source.alias == "trades"
+        # Single arg is considered literal (file path)
+        assert result.source.is_literal is True
+        assert result.source.args == ["trades"]
 
     def test_parse_source_with_table(self):
-        """Test parsing source(alias, table) syntax for databases."""
-        result = parse("WITH source(pump_fun, trades) PLOT price AGAINST time")
+        """Test parsing source('alias', 'table') syntax for databases."""
+        result = parse("WITH source('pump_fun', 'trades') PLOT price AGAINST time")
         assert isinstance(result.source, SourceRef)
         assert result.source.alias == "pump_fun"
         assert result.source.table == "trades"
         assert result.source.args == ["pump_fun", "trades"]
 
     def test_parse_source_multiple_segments(self):
-        """Test parsing source(alias, dir, 'file') for folder connector."""
-        result = parse("WITH source(local_data, subdir, 'data.csv') PLOT price AGAINST time")
+        """Test parsing source('alias', 'dir', 'file') for folder connector."""
+        result = parse("WITH source('local_data', 'subdir', 'data.csv') PLOT price AGAINST time")
         assert isinstance(result.source, SourceRef)
         assert result.source.alias == "local_data"
         assert result.source.args == ["local_data", "subdir", "data.csv"]
 
     def test_parse_source_many_segments(self):
         """Test parsing source with many path segments."""
-        result = parse("WITH source(data, y2024, jan, week1, 'trades.csv') PLOT price AGAINST time")
+        result = parse("WITH source('data', 'y2024', 'jan', 'week1', 'trades.csv') PLOT price AGAINST time")
         assert isinstance(result.source, SourceRef)
         assert result.source.alias == "data"
         assert result.source.args == ["data", "y2024", "jan", "week1", "trades.csv"]
 
-    def test_parse_source_mixed_segments(self):
-        """Test parsing source with mix of identifiers and quoted strings."""
-        result = parse("WITH source(data, 'subdir.name', file) PLOT price AGAINST time")
+    def test_parse_source_all_strings(self):
+        """Test parsing source requires all string literals."""
+        result = parse("WITH source('data', 'subdir.name', 'file') PLOT price AGAINST time")
         assert isinstance(result.source, SourceRef)
         assert result.source.args == ["data", "subdir.name", "file"]
 
     def test_parse_source_case_insensitive(self):
         """Test SOURCE keyword is case-insensitive."""
-        result = parse("WITH SOURCE(trades) PLOT price AGAINST time")
+        result = parse("WITH SOURCE('trades') PLOT price AGAINST time")
         assert isinstance(result.source, SourceRef)
-        assert result.source.alias == "trades"
+        assert result.source.args == ["trades"]
 
     def test_parse_source_with_filter(self):
         """Test source syntax with FILTER clause."""
         result = parse(
-            "WITH source(trades) PLOT price AGAINST time FILTER price > 100"
+            "WITH source('trades') PLOT price AGAINST time FILTER price > 100"
         )
         assert isinstance(result.source, SourceRef)
         assert result.series[0].filter is not None
@@ -412,10 +413,17 @@ class TestParserSourceSyntax:
     def test_parse_source_with_format(self):
         """Test source syntax with FORMAT clause."""
         result = parse(
-            "WITH source(prod) PLOT price AGAINST time FORMAT title = 'Chart'"
+            "WITH source('prod') PLOT price AGAINST time FORMAT title = 'Chart'"
         )
         assert isinstance(result.source, SourceRef)
         assert result.series[0].format.title == "Chart"
+
+    def test_parse_source_rejects_unquoted_args(self):
+        """Test that unquoted identifiers are rejected."""
+        from plotql.core.parser import ParseError
+        with pytest.raises(ParseError) as exc_info:
+            parse("WITH source(trades) PLOT price AGAINST time")
+        assert "string literal" in str(exc_info.value).lower()
 
 
 # =============================================================================
@@ -427,7 +435,7 @@ class TestConnectorIntegration:
     """Integration tests for connector system."""
 
     def test_execute_with_source_alias(self, tmp_path, temp_csv, monkeypatch):
-        """Test executing query with source(alias)."""
+        """Test executing query with source('alias')."""
         # Create config
         config_path = tmp_path / "sources.toml"
         config_path.write_text(f"""
@@ -439,14 +447,14 @@ path = "{temp_csv}"
 
         from plotql.core.executor import execute
 
-        ast = parse("WITH source(testdata) PLOT y AGAINST x")
+        ast = parse("WITH source('testdata') PLOT y AGAINST x")
         results = execute(ast)
 
         assert len(results) == 1
         assert len(results[0].x) == 5  # temp_csv has 5 rows
 
     def test_execute_with_folder_source(self, tmp_path, monkeypatch):
-        """Test executing query with folder source(alias, file)."""
+        """Test executing query with folder source('alias', 'file')."""
         # Create data directory and file
         data_dir = tmp_path / "data"
         data_dir.mkdir()
@@ -464,7 +472,7 @@ path = "{data_dir}"
 
         from plotql.core.executor import execute
 
-        ast = parse("WITH source(local, 'trades.csv') PLOT y AGAINST x")
+        ast = parse("WITH source('local', 'trades.csv') PLOT y AGAINST x")
         results = execute(ast)
 
         assert len(results) == 1
@@ -490,7 +498,7 @@ path = "{data_dir}"
 
         from plotql.core.executor import execute
 
-        ast = parse("WITH source(local, '2024', jan, 'trades.csv') PLOT volume AGAINST price")
+        ast = parse("WITH source('local', '2024', 'jan', 'trades.csv') PLOT volume AGAINST price")
         results = execute(ast)
 
         assert len(results) == 1

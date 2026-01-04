@@ -31,26 +31,18 @@ def generate():
 
     connector_choice_str = ", ".join(connector_choices) if connector_choices else None
 
-    # Build with_clause - only include connector_call if connectors are defined
-    if connector_choice_str:
-        with_clause = """with_clause: $ => seq(
+    # Build with_clause with source() function
+    with_clause = """with_clause: $ => seq(
       $.with,
-      choice(
-        $.string,
-        $.connector_call
-      )
+      $.source_call
     ),
 
-    connector_call: $ => seq(
-      choice(""" + connector_choice_str + """),
+    source_call: $ => seq(
+      $.source,
       '(',
-      $.identifier,
+      $.string,
+      repeat(seq(',', $.string)),
       ')'
-    ),"""
-    else:
-        with_clause = """with_clause: $ => seq(
-      $.with,
-      $.string
     ),"""
 
     grammar_js = f'''// Auto-generated from grammar.json - DO NOT EDIT MANUALLY

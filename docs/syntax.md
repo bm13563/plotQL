@@ -17,6 +17,8 @@ Multiple `PLOT` clauses can be added to layer series on the same chart.
 
 ## Data Sources
 
+All `source()` arguments must be string literals (quoted strings).
+
 ### Literal File Paths
 
 Reference files directly with quoted strings inside `source()`:
@@ -33,8 +35,10 @@ Supported formats: CSV, Parquet, JSON, NDJSON
 Use configured aliases from `~/.config/plotql/sources.toml`:
 
 ```sql
-WITH source(trades) PLOT price AGAINST time
+WITH source('trades') PLOT price AGAINST time
 ```
+
+If the argument matches a configured source alias, it will be used. Otherwise, it's treated as a file path.
 
 See [Connectors](connectors.md) for configuration details.
 
@@ -43,7 +47,7 @@ See [Connectors](connectors.md) for configuration details.
 Query database tables:
 
 ```sql
-WITH source(my_database, trades) PLOT price AGAINST time
+WITH source('my_database', 'trades') PLOT price AGAINST time
 ```
 
 ### Folder Sources
@@ -51,7 +55,7 @@ WITH source(my_database, trades) PLOT price AGAINST time
 Navigate directory structures:
 
 ```sql
-WITH source(local_data, 2024, jan, trades.csv) PLOT price AGAINST time
+WITH source('local_data', '2024', 'jan', 'trades.csv') PLOT price AGAINST time
 ```
 
 ## Plot Types

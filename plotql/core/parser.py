@@ -178,49 +178,38 @@ class Parser:
         )
 
     def parse_with_clause(self) -> SourceRef:
-        """Parse: WITH source('filename') | WITH source(alias) | WITH source(alias, table)"""
+        """Parse: WITH source('filename') | WITH source('alias') | WITH source('alias', 'table')"""
         self.expect("WITH")
         self.expect("SOURCE")
         self.expect("LPAREN")
 
         args: List[str] = []
-        is_literal = False
 
-        # First argument: either a string literal or an identifier
+        # First argument: must be a string literal
         if self.current and self.current.type == "STRING":
             token = self.expect("STRING")
             args.append(token.value[1:-1])  # Strip quotes
-            is_literal = True
-        elif self.current and self.current.type == "IDENT":
-            token = self.expect("IDENT")
-            args.append(token.value)
         else:
             raise ParseError(
-                "Expected file path string or source alias",
+                "Expected string literal in source()",
                 self.current.position if self.current else 0
             )
 
-        # Additional arguments (comma-separated identifiers or strings)
-        # Strings are useful for filenames with dots: source(local, 'trades.csv')
+        # Additional arguments (comma-separated strings)
         while self.match("COMMA"):
-            if is_literal:
-                raise ParseError(
-                    "Literal file paths cannot have additional arguments",
-                    self.current.position if self.current else 0
-                )
             if self.current and self.current.type == "STRING":
                 token = self.expect("STRING")
                 args.append(token.value[1:-1])  # Strip quotes
-            elif self.current and self.current.type == "IDENT":
-                token = self.expect("IDENT")
-                args.append(token.value)
             else:
                 raise ParseError(
-                    "Expected identifier or string in source arguments",
+                    "Expected string literal in source()",
                     self.current.position if self.current else 0
                 )
 
         self.expect("RPAREN")
+
+        # Single argument = literal file path, multiple = config alias + args
+        is_literal = len(args) == 1
         return SourceRef(args=args, is_literal=is_literal)
 
     def parse_column_ref(self) -> ColumnRef:

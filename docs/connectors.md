@@ -4,20 +4,20 @@ Connectors abstract data loading from various sources. PlotQL includes connector
 
 ## Overview
 
-Data sources are specified in the `WITH` clause:
+Data sources are specified in the `WITH` clause. All arguments must be string literals:
 
 ```sql
 -- Literal file path
 WITH source('data.csv') PLOT y AGAINST x
 
 -- Named source from config
-WITH source(trades) PLOT y AGAINST x
+WITH source('trades') PLOT y AGAINST x
 
 -- Database table
-WITH source(my_db, trades) PLOT y AGAINST x
+WITH source('my_db', 'trades') PLOT y AGAINST x
 
 -- Folder path
-WITH source(local_data, 2024, jan, trades.csv) PLOT y AGAINST x
+WITH source('local_data', '2024', 'jan', 'trades.csv') PLOT y AGAINST x
 ```
 
 ## Configuration
@@ -73,7 +73,7 @@ path = "/data/trades.csv"
 ```
 
 ```sql
-WITH source(trades) PLOT price AGAINST time
+WITH source('trades') PLOT price AGAINST time
 ```
 
 ### Folder Connector
@@ -89,10 +89,10 @@ path = "/data/market"
 
 ```sql
 -- Single file
-WITH source(local_data, trades.csv) PLOT price AGAINST time
+WITH source('local_data', 'trades.csv') PLOT price AGAINST time
 
 -- Nested path
-WITH source(local_data, 2024, jan, trades.csv) PLOT price AGAINST time
+WITH source('local_data', '2024', 'jan', 'trades.csv') PLOT price AGAINST time
 -- Resolves to: /data/market/2024/jan/trades.csv
 ```
 
@@ -117,7 +117,7 @@ limit = 10000        # Optional row limit, default: 10000
 ```
 
 ```sql
-WITH source(pump_fun, trades) PLOT price AGAINST time
+WITH source('pump_fun', 'trades') PLOT price AGAINST time
 ```
 
 The second argument is the table name.
@@ -137,7 +137,7 @@ pip install clickhouse-connect
 The ClickHouse connector pushes `FILTER` clauses to SQL for efficient querying:
 
 ```sql
-WITH source(pump_fun, trades)
+WITH source('pump_fun', 'trades')
 PLOT price AGAINST time
 FILTER symbol = 'AAPL' AND volume > 1000
 ```
@@ -151,9 +151,8 @@ This minimizes data transfer by filtering at the database level.
 
 ## How Connectors Work
 
-1. **Literal paths** `source('path.csv')`: Routed to LiteralConnector
-2. **Single argument** `source(alias)`: Looks up config, routes based on `type`
-3. **Multiple arguments** `source(alias, ...)`:
+1. **Single argument** `source('arg')`: Tries config lookup first, falls back to file path
+2. **Multiple arguments** `source('alias', ...)`:
    - For `clickhouse`: Second arg is table name
    - For `folder`: Remaining args are path segments
 

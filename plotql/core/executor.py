@@ -132,24 +132,40 @@ def _load_from_source_ref(
     Load data from a SourceRef.
 
     Handles:
-    - source('path.csv') -> literal file path
-    - source(trades) -> file alias lookup
-    - source(pump_fun, trades) -> database alias + table
-    - source(local_data, subdir, file.csv) -> folder alias + path segments
-    """
-    if source.is_file_literal:
-        # Literal file path
-        connector = LiteralConnector()
-        return connector.load({"path": source.args[0]}), False
+    - source('path.csv') -> literal file path (single arg, looks like file path)
+    - source('trades') -> config alias lookup (single arg, no file extension)
+    - source('pump_fun', 'trades') -> database alias + table
+    - source('local_data', 'subdir', 'file.csv') -> folder alias + path segments
 
-    # Config-based source
-    alias = source.alias
+    For single-arg sources, we try config alias lookup first, falling back to
+    literal file path if not found.
+    """
+    from plotql.core.config import ConfigError
+
+    if len(source.args) == 1:
+        # Single arg: try config alias first, fall back to file path
+        arg = source.args[0]
+        try:
+            source_config = get_source_config(arg)
+            connector = get_connector(source_config.type)
+            config = dict(source_config.config)
+            if connector.supports_filter_pushdown and filters:
+                return connector.load(config, filters=filters), True
+            else:
+                return connector.load(config), False
+        except ConfigError:
+            # Not a config alias, treat as literal file path
+            connector = LiteralConnector()
+            return connector.load({"path": arg}), False
+
+    # Multi-arg: always a config alias with additional args
+    alias = source.args[0]
     source_config = get_source_config(alias)
     connector = get_connector(source_config.type)
 
     # Build config dict, adding extra args based on connector type
     config = dict(source_config.config)
-    extra_args = source.args[1:] if len(source.args) > 1 else []
+    extra_args = source.args[1:]
 
     if source_config.type == "folder":
         # Folder connector: all extra args are path segments
