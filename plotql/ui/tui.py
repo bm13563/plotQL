@@ -334,8 +334,9 @@ class QueryEditor(TextArea):
         offset = self._get_cursor_offset()
         before = self.text[:offset]
 
-        # Check if we're in a file path context (inside quotes after WITH)
-        file_path_match = re.search(r"WITH\s+['\"]([^'\"]*?)$", before, re.IGNORECASE)
+        # Check if we're in a file path context (inside quotes in source() or after WITH)
+        # Matches: source('path, source("path, WITH 'path, WITH "path
+        file_path_match = re.search(r"(?:source\(\s*|WITH\s+)['\"]([^'\"]*?)$", before, re.IGNORECASE)
         if file_path_match:
             # Replace only the path portion, keep the quote
             path_start = file_path_match.start(1)
@@ -345,8 +346,8 @@ class QueryEditor(TextArea):
             self._move_cursor_to_offset(new_offset)
             return
 
-        # Find word boundary (include path characters for file paths)
-        match = re.search(r"[a-zA-Z0-9_./'-]*$", before)
+        # Find word boundary (include path characters for file paths, but NOT quotes)
+        match = re.search(r"[a-zA-Z0-9_./-]*$", before)
         if match:
             word_start = match.start()
             # Replace the partial word with completion

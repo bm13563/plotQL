@@ -57,12 +57,14 @@ class TestQueryEditor:
     @pytest.mark.asyncio
     async def test_editor_creation(self):
         """Test QueryEditor is created with default text."""
-        app = PlotQLApp()
-        async with app.run_test() as pilot:
-            editor = app.query_one("#editor", QueryEditor)
-            assert editor is not None
-            assert "WITH" in editor.text
-            assert "PLOT" in editor.text
+        # Mock get_last_query to return None, so the example query is used
+        with patch("plotql.ui.tui.get_last_query", return_value=None):
+            app = PlotQLApp()
+            async with app.run_test() as pilot:
+                editor = app.query_one("#editor", QueryEditor)
+                assert editor is not None
+                assert "WITH" in editor.text
+                assert "PLOT" in editor.text
 
     @pytest.mark.asyncio
     async def test_editor_has_autocompleter(self):
@@ -654,6 +656,76 @@ class TestFullPipeline:
             editor.text = f"WITH source('{temp_csv}') PLOT y AGAINST x"
             await pilot.press("f5")
             await pilot.pause()
+
+
+# =============================================================================
+# Completion Insertion Tests
+# =============================================================================
+
+class TestCompletionInsertion:
+    """Tests for completion text insertion in QueryEditor."""
+
+    @pytest.mark.asyncio
+    async def test_insert_completion_preserves_quote_in_source(self):
+        """Test that completing a path inside source() preserves the opening quote.
+
+        Regression test for bug where completing 'docs/' inside source('docs/
+        would lose the opening quote.
+        """
+        app = PlotQLApp()
+        async with app.run_test() as pilot:
+            editor = app.query_one("#editor", QueryEditor)
+
+            # Set up: user has typed "WITH source('docs/" and cursor is at end
+            editor.text = "WITH source('docs/"
+            # Position cursor at end
+            editor.cursor_location = (0, len(editor.text))
+
+            # Simulate completing with "docs/examples/"
+            editor._insert_completion("docs/examples/")
+
+            # The quote should be preserved
+            assert "source('docs/examples/" in editor.text, (
+                f"Quote was lost! Got: {editor.text}"
+            )
+
+    @pytest.mark.asyncio
+    async def test_insert_completion_multipart_path_in_source(self):
+        """Test completing multi-part paths like docs/examples/file.csv."""
+        app = PlotQLApp()
+        async with app.run_test() as pilot:
+            editor = app.query_one("#editor", QueryEditor)
+
+            # User has typed partial path
+            editor.text = "WITH source('docs/ex"
+            editor.cursor_location = (0, len(editor.text))
+
+            # Complete with full path
+            editor._insert_completion("docs/examples/data.csv'")
+
+            # Should have proper quoted path
+            assert "source('docs/examples/data.csv'" in editor.text, (
+                f"Path completion failed! Got: {editor.text}"
+            )
+
+    @pytest.mark.asyncio
+    async def test_insert_completion_root_path_in_source(self):
+        """Test completing a path at root level inside source()."""
+        app = PlotQLApp()
+        async with app.run_test() as pilot:
+            editor = app.query_one("#editor", QueryEditor)
+
+            # User just opened the quote
+            editor.text = "WITH source('"
+            editor.cursor_location = (0, len(editor.text))
+
+            # Complete with a directory
+            editor._insert_completion("examples/")
+
+            # Quote should be preserved
+            assert "source('examples/" in editor.text, (
+                f"Quote was lost! Got: {editor.text}"
+            )
 
 
 # =============================================================================
