@@ -6,7 +6,7 @@ A SQL-like query language for creating plots. No Python boilerplate, no remember
 
 ## Quick Start
 
-The easiest way to use PlotQL is through the interactive TUI:
+The easiest way to use PlotQL is through the interactive TUI, which allows you to plot data without leaving your terminal:
 
 ```bash
 # Setup (requires uv)
